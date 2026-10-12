@@ -19,16 +19,16 @@ export class City {
     scene.add(this.root);
     box(this.root, [WORLD_SIZE, .12, WORLD_SIZE], [0, -.06, 0], '#80735b').userData.surface='dirt';
     for (const a of ROAD_CENTRES) {
-      box(this.root, [Math.abs(a)<96?8:12, .018, 428], [a, .01, 0], '#4d4940').userData.surface='dirt';
-      box(this.root, [428, .018, Math.abs(a)<96?8:12], [0, .014, a], '#4d4940').userData.surface='dirt';
+      box(this.root, [Math.abs(a)<96?8:12, .018, 428], [a, .01, 0], '#4d4940').userData.surface='road';
+      box(this.root, [428, .018, Math.abs(a)<96?8:12], [0, .014, a], '#4d4940').userData.surface='road';
       for(const side of [-1,1]){
-        if(Math.abs(a)>=96){box(this.root,[2.5,.12,428],[a+side*7.25,.045,0],'#b4a58a');box(this.root,[428,.12,2.5],[0,.045,a+side*7.25],'#b4a58a');}
-        else for(let p=-210;p<216;p+=14){const offset=side*(7.25+Math.sin(p*.12)*.25),width=1.1+Math.abs(Math.sin(p*.3))*.3;const v=box(this.root,[width,.12,12.3],[a+offset,.045,p],'#a4987e');v.rotation.y=Math.sin(p*.7)*.035;const h=box(this.root,[12.3,.12,width],[p,.045,a+offset],'#a4987e');h.rotation.y=Math.sin(p*.7)*.035;}
+        if(Math.abs(a)>=96){box(this.root,[2.5,.12,428],[a+side*7.25,.045,0],'#b4a58a').userData.surface='pavement';box(this.root,[428,.12,2.5],[0,.045,a+side*7.25],'#b4a58a').userData.surface='pavement';}
+        else for(let p=-210;p<216;p+=14){const offset=side*(7.25+Math.sin(p*.12)*.25),width=1.1+Math.abs(Math.sin(p*.3))*.3;const v=box(this.root,[width,.12,12.3],[a+offset,.045,p],'#a4987e');v.rotation.y=Math.sin(p*.7)*.035;v.userData.surface='pavement';const h=box(this.root,[12.3,.12,width],[p,.045,a+offset],'#a4987e');h.rotation.y=Math.sin(p*.7)*.035;h.userData.surface='pavement';}
       }
       if(Math.abs(a)<96)for(let p=-90;p<96;p+=9){
         const width=8.5+Math.sin(p*.13+a)*1.5,offset=Math.sin(p*.071+a)*1.3;
-        box(this.root,[width,.016,10],[a+offset,.04,p],'#665a43').userData.surface='dirt';
-        box(this.root,[10,.016,width],[p,.045,a+offset],'#665a43').userData.surface='dirt';
+        box(this.root,[width,.016,10],[a+offset,.04,p],'#665a43').userData.surface='road';
+        box(this.root,[10,.016,width],[p,.045,a+offset],'#665a43').userData.surface='road';
       }
       for (let p = -210; p < 216; p += 6) {
         if(Math.abs(a)<96&&Math.abs(p)<96)continue;
@@ -191,8 +191,8 @@ export class City {
     this.physics.fixedBox(new THREE.Vector3(x, 1.5 * scale, z), new THREE.Vector3(.22, 1.5 * scale, .22));
   }
   lamp(x: number, z: number) {
-    cylinder(this.root, .07, .11, 5.2, [x, 2.6, z], '#475951');
-    box(this.root, [.75, .09, .09], [x - .3 * Math.sign(x), 5.15, z], '#475951');
+    cylinder(this.root, .07, .11, 5.2, [x, 2.6, z], '#475951').userData.surface='rust';
+    box(this.root, [.75, .09, .09], [x - .3 * Math.sign(x), 5.15, z], '#475951').userData.surface='rust';
     box(this.root, [.6, .13, .24], [x - .6 * Math.sign(x), 5.12, z], '#e5c887');
   }
   scooter(x: number, z: number) {

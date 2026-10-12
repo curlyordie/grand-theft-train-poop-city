@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { loadSurfaceMaps } from './surfaces';
+import { CharacterMotion,loadMotions,type MotionOptions } from './motion';
+import { loadWeaponAssets } from './weapon-assets';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
@@ -6,43 +9,37 @@ import civilianUrl from '../assets/remy.glb?url';
 import humanUrl from '../assets/resident.glb?url';
 import bossUrl from '../assets/boss.glb?url';
 import carUrl from '../assets/car.glb?url';
-import brickUrl from '../assets/brick.jpg?url';
-import bumpUrl from '../assets/brick-bump.jpg?url';
-import groundUrl from '../assets/ground.jpg?url';
-import environmentUrl from '../assets/environment.hdr?url';
+import environmentUrl from '../assets/pretville-street.hdr?url';
 let human:GLTF,car:GLTF,civilian:GLTF,boss:GLTF;
-
-export let brick:THREE.Texture,bump:THREE.Texture,ground:THREE.Texture,environment:THREE.DataTexture;
+export let environment:THREE.DataTexture;
 export async function loadAssets(){
  const loader=new GLTFLoader(),textures=new THREE.TextureLoader();
- [human,car,civilian,brick,bump,ground,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),textures.loadAsync(brickUrl),textures.loadAsync(bumpUrl),textures.loadAsync(groundUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl)]);
- brick.colorSpace=ground.colorSpace=THREE.SRGBColorSpace;
- for(const texture of [brick,bump,ground]){texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.anisotropy=4;}
+ [human,car,civilian,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl),loadSurfaceMaps(textures),loadWeaponAssets(loader),loadMotions()]);
  environment.mapping=THREE.EquirectangularReflectionMapping;
-
 }
+
 export function humanModel(index=0,rab=false,official=false){
  const useCivilian=!rab&&!official;
  const character=rab?boss:useCivilian?civilian:human;
  const root=new THREE.Group(),body=clone(character.scene) as THREE.Group;root.add(body);
  // Resident mesh is authored in centimetres under a 0.01 conversion node.
  // Skinned bounds before the first renderer skeleton update are not valid for sizing.
- body.scale.setScalar(rab?.95:useCivilian?1:1.02);body.position.y=.015;
+ // Remy is authored at 3.78m; match The Boss at approximately 1.895m.
+ body.scale.setScalar(rab?.95:useCivilian?.50075:1.02);body.position.y=.015;
  // Native front faces +Z; the game's character convention faces -Z.
  body.rotation.y=rab||useCivilian?Math.PI:0;
  body.traverse(object=>{if(object instanceof THREE.Mesh){object.castShadow=object.receiveShadow=true;object.frustumCulled=true;if(object instanceof THREE.SkinnedMesh){object.geometry.computeBoundingSphere();object.boundingSphere=object.geometry.boundingSphere!.clone();object.boundingSphere.radius*=1.8;}object.material=(object.material as THREE.MeshStandardMaterial).clone();const mat=object.material as THREE.MeshStandardMaterial;mat.roughness=.82;mat.color.set(official?'#b8ad84':'#ffffff');if(object.name==='vanguard_visor')object.visible=false;
 }});
- const mixer=new THREE.AnimationMixer(body);
- const walk=mixer.clipAction(character.animations.find(a=>a.name==='Walk')!);
- const idle=mixer.clipAction(character.animations.find(a=>a.name==='Idle')!);
- walk.play();idle.play();mixer.update(0);body.updateMatrixWorld(true);
+ const motion=new CharacterMotion(body,rab?'boss':official?'police':'remy',character.animations);
+ body.updateMatrixWorld(true);
  const bone=(name:string)=>body.getObjectByName(name)??body.getObjectByName(name.replace('mixamorig','mixamorig:'));
- const left=bone('mixamorigLeftUpLeg'),right=bone('mixamorigRightUpLeg');const leftPose=left?.quaternion.clone(),rightPose=right?.quaternion.clone();let strideTime=0;
  let seated=false;const originalPose=new Map<THREE.Object3D,THREE.Quaternion>();
  const poseDriving=(driving:boolean,open=false)=>{
   if(driving===seated)return;
-  if(!driving){originalPose.forEach((q,b)=>b.quaternion.copy(q));originalPose.clear();seated=false;return;}
-  seated=true;root.updateMatrixWorld(true);
+  if(!driving){motion.leaveDrive();originalPose.forEach((q,b)=>b.quaternion.copy(q));originalPose.clear();seated=false;return;}
+  seated=true;
+  if(!official){motion.drive(0);return;}
+  root.updateMatrixWorld(true);
   const axis=new THREE.Vector3(1,0,0).applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()));
   const bend=(name:string,angle:number)=>{const joint=bone(name);if(!joint?.parent)return;originalPose.set(joint,joint.quaternion.clone());const world=joint.getWorldQuaternion(new THREE.Quaternion()),parent=joint.parent.getWorldQuaternion(new THREE.Quaternion());world.premultiply(new THREE.Quaternion().setFromAxisAngle(axis,angle));joint.quaternion.copy(parent.invert().multiply(world));root.updateMatrixWorld(true);};
   for(const side of ['Left','Right']){bend(`mixamorig${side}UpLeg`,open?1:1.25);bend(`mixamorig${side}Leg`,open?-.95:-1.2);bend(`mixamorig${side}Arm`,.8);}
@@ -50,10 +47,10 @@ export function humanModel(index=0,rab=false,official=false){
  const arms=[new THREE.Group(),new THREE.Group()],legs=[new THREE.Group(),new THREE.Group()],torso=new THREE.Group();
  // Preserve attachment/pose interfaces. The imported skeleton provides the walking animation.
  for(let i=0;i<2;i++){arms[i].position.set((i?1:-1)*.29,1.35,0);root.add(arms[i]);root.add(legs[i]);}root.add(torso);
- const poseCombat=(firearm:boolean,aiming:boolean,attack:number,reloading:boolean)=>{
+ const poseCombat=(firearm:boolean,aiming:boolean,attack:number,reloading:boolean,heldWeapon=false)=>{
   if(seated)return;
   const strength=firearm?1:attack;
-  if(strength<=0)return;
+
   root.updateMatrixWorld(true);
   const facing=root.getWorldQuaternion(new THREE.Quaternion());
   const point=(object:THREE.Object3D)=>object.getWorldPosition(new THREE.Vector3());
@@ -64,7 +61,7 @@ export function humanModel(index=0,rab=false,official=false){
    const local=joint.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(delta.multiply(joint.getWorldQuaternion(new THREE.Quaternion())));
    joint.quaternion.slerp(local,weight);root.updateMatrixWorld(true);
   };
-  for(const side of firearm?['Right','Left']:['Right']){
+  if(!motion.capturedAction&&strength>0)for(const side of firearm?['Right','Left']:['Right']){
    const arm=bone(`mixamorig${side}Arm`),forearm=bone(`mixamorig${side}ForeArm`),hand=bone(`mixamorig${side}Hand`);
    const lateral=side==='Right'?.12:-.12;
    direct(arm,forearm,new THREE.Vector3(lateral,reloading?-.55:aiming?-.08:-.3,-1),strength);
@@ -72,14 +69,28 @@ export function humanModel(index=0,rab=false,official=false){
   }
   // Move the existing weapon attachment to the imported hand, rather than a dummy shoulder.
   const hand=bone('mixamorigRightHand');
-  if(hand&&firearm){arms[1].position.copy(root.worldToLocal(point(hand))).add(new THREE.Vector3(0,.53,.08));arms[1].rotation.set(0,0,0);}
+  if(hand&&(firearm||heldWeapon)){arms[1].position.copy(root.worldToLocal(point(hand))).add(new THREE.Vector3(0,.53,.08));arms[1].rotation.set(0,0,0);}
  };
- root.userData.poseDriving=poseDriving;root.userData.asset=rab?'The Boss':official?'Soldier':'Remy';
- return {root,arms,legs,torso,hips:torso,poseDriving,poseCombat,animate:(dt:number,speed:number)=>{poseDriving(false);if(walk){const moving=speed>.2;walk.enabled=moving;idle.enabled=!moving;walk.timeScale=Math.min(2.2,speed/1.6);mixer.update(dt);}else{strideTime+=dt*speed*2;const stride=Math.sin(strideTime)*Math.min(.5,speed*.13);if(left&&leftPose)left.quaternion.copy(leftPose).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),stride));if(right&&rightPose)right.quaternion.copy(rightPose).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-stride));}}};
+ const animateDriving=(dt:number,open=false)=>{poseDriving(true,open);if(!official)motion.drive(dt);};
+ const fitDriving=(min:THREE.Vector3,max:THREE.Vector3,scale:number,seat:THREE.Vector3)=>{
+  root.updateMatrixWorld(true);const bounds=new THREE.Box3();
+  for(const name of ['Head','Hips','LeftHand','RightHand','LeftFoot','RightFoot','LeftShoulder','RightShoulder']){
+   const joint=bone(`mixamorig${name}`);if(joint)bounds.expandByPoint(root.worldToLocal(joint.getWorldPosition(new THREE.Vector3())));
+  }
+  bounds.min.add(new THREE.Vector3(-.10,-.07,-.14));bounds.max.add(new THREE.Vector3(.10,rab?.4:official?.3:.24,.14));
+  const extent=bounds.getSize(new THREE.Vector3()),space=max.clone().sub(min);
+  const fitted=Math.min(scale,space.x/extent.x,space.y/extent.y,space.z/extent.z);
+  const position=seat.clone();for(const axis of ['x','y','z'] as const)position[axis]=THREE.MathUtils.clamp(position[axis],min[axis]-bounds.min[axis]*fitted,max[axis]-bounds.max[axis]*fitted);
+  root.userData.driverBounds={min:bounds.min.clone().multiplyScalar(fitted).add(position).toArray(),max:bounds.max.clone().multiplyScalar(fitted).add(position).toArray(),limits:[min.toArray(),max.toArray()]};
+  return{scale:fitted,position};
+ };
+ root.userData.poseDriving=poseDriving;root.userData.animateDriving=animateDriving;root.userData.fitDriving=fitDriving;root.userData.motion=motion;root.userData.asset=rab?'The Boss':official?'Soldier':'Remy';
+ return {root,arms,legs,torso,hips:torso,motion,poseDriving,animateDriving,fitDriving,poseCombat,playMotion:(name:string,duration?:number,priority=2)=>motion.play(name,duration,priority),animate:(dt:number,speed:number,options:MotionOptions={})=>{poseDriving(false);motion.update(dt,speed,options);}};
+
 }
 export function importedCar(colour:string,width:number,length:number){
  const root=new THREE.Group();const mesh=car.scene.getObjectByName('ToyCar')!;
- const model=mesh.clone(true);model.updateMatrixWorld(true);
+ const model=new THREE.Group();model.rotation.y=Math.PI;model.add(mesh.clone(true));model.updateMatrixWorld(true);
  // Extract only the car, excluding the showcase's surrounding fabric and cameras.
  model.traverse(o=>{if(o instanceof THREE.Mesh){const old=o.material as THREE.MeshPhysicalMaterial;const mat=old.clone();mat.transmission=0;mat.clearcoat=.65;mat.clearcoatRoughness=.27;mat.roughness=Math.max(.28,mat.roughness);mat.color.multiply(new THREE.Color(colour));o.material=mat;o.castShadow=o.receiveShadow=true;}});
  model.updateMatrixWorld(true);

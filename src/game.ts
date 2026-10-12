@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { environment, brick, bump, ground } from './world/assets';
+import { environment } from './world/assets';
 import { grimeTexture } from './world/grit';
+import { surfaces } from './world/surfaces';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { City, SAFEHOUSE, SPAWN } from './world/city';
 import { cylinder, sign } from './world/models';
@@ -70,7 +71,7 @@ export class Game {
     const pmrem=new THREE.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromEquirectangular(environment).texture;pmrem.dispose();this.scene.environmentIntensity=.55;this.scene.background=environment;this.scene.backgroundBlurriness=.35;
      this.scene.fog = new THREE.Fog('#aaa895', 65, 220);
     this.scene.add(new THREE.HemisphereLight('#ded9c7', '#373127', .5));
-    const sun = new THREE.DirectionalLight('#ffe0af', 2.8); sun.position.set(-34, 58, 30); sun.castShadow = true;
+    const sun = new THREE.DirectionalLight('#fff0dc', 2.4); sun.position.set(-34, 58, 30); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -75; sun.shadow.camera.right = 75; sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 160; sun.shadow.normalBias = .09; sun.shadow.bias = -.0006; this.scene.add(sun);
     const city = new City(this.scene, this.physics); this.batchCity(city.root);
@@ -116,9 +117,14 @@ export class Game {
       const geometry = (object.geometry.index ? object.geometry.toNonIndexed() : object.geometry.clone()).applyMatrix4(object.matrixWorld);
       // World-scale UVs avoid stretching a tiny grime texture across a 428m road.
       const positions=geometry.attributes.position,normals=geometry.attributes.normal,uv=geometry.attributes.uv;
+      const surface=object.userData.surface;
+      const uvScale=surface==='road'?.25:surface==='pavement'?.4:surface==='tin'?.5:.35;
+      const roofSpace=surface==='tin'&&object.parent?object.parent.matrixWorld.clone().invert():null;
+      const roofPoint=new THREE.Vector3();
       if(uv)for(let i=0;i<positions.count;i++){
-        if(Math.abs(normals.getY(i))>.7)uv.setXY(i,positions.getX(i)*.35,positions.getZ(i)*.35);
-        else uv.setXY(i,(Math.abs(normals.getX(i))>.7?positions.getZ(i):positions.getX(i))*.35,positions.getY(i)*.35);
+        if(roofSpace){roofPoint.fromBufferAttribute(positions,i).applyMatrix4(roofSpace);uv.setXY(i,roofPoint.x*uvScale,roofPoint.z*uvScale);}
+        else if(Math.abs(normals.getY(i))>.7)uv.setXY(i,positions.getX(i)*uvScale,positions.getZ(i)*uvScale);
+        else uv.setXY(i,(Math.abs(normals.getX(i))>.7?positions.getZ(i):positions.getX(i))*uvScale,positions.getY(i)*uvScale);
       }
       geometry.computeBoundingBox(); const size = geometry.boundingBox!.getSize(new THREE.Vector3()), centre = geometry.boundingBox!.getCenter(new THREE.Vector3());
       const cell = Math.max(size.x, size.z) > 100 ? 'infrastructure' : `${Math.floor(centre.x / 48)},${Math.floor(centre.z / 48)}`;
@@ -130,14 +136,17 @@ export class Game {
     });
 
     const material = new THREE.MeshStandardMaterial({vertexColors:true,flatShading:false,roughness:.95,map:grimeTexture()});
-    const brickMaterial=new THREE.MeshStandardMaterial({vertexColors:true,map:brick,bumpMap:bump,bumpScale:.045,roughness:.93});
-    const dirtMaterial=new THREE.MeshStandardMaterial({vertexColors:true,map:ground,roughness:.98});
-    const tinMaterial=new THREE.MeshStandardMaterial({vertexColors:true,map:grimeTexture(),bumpMap:bump,bumpScale:.015,metalness:.65,roughness:.58});
+    const brickMaterial=new THREE.MeshStandardMaterial({...surfaces.plaster,roughness:1,normalScale:new THREE.Vector2(.6,.6)});
+    const dirtMaterial=new THREE.MeshStandardMaterial({...surfaces.gravel,roughness:1,normalScale:new THREE.Vector2(.65,.65)});
+    const roadMaterial=new THREE.MeshStandardMaterial({...surfaces.road,roughness:1,normalScale:new THREE.Vector2(.5,.5)});
+    const pavementMaterial=new THREE.MeshStandardMaterial({...surfaces.pavement,roughness:1,normalScale:new THREE.Vector2(.65,.65)});
+    const tinMaterial=new THREE.MeshStandardMaterial({...surfaces.roof,metalness:.45,roughness:1,normalScale:new THREE.Vector2(.7,.7)});
+    const rustMaterial=new THREE.MeshStandardMaterial({...surfaces.rust,metalness:1,roughness:1,normalScale:new THREE.Vector2(.65,.65)});
     const wetMaterial=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.24,metalness:.18});
     buckets.forEach((geometries,key) => {
       const geometry = mergeGeometries(geometries,false);
       if (!geometry) throw new Error(`City geometry merge failed: ${key}`);
-      if (geometry) { geometry.computeBoundingSphere(); const mesh=new THREE.Mesh(geometry,key.endsWith('wet')?wetMaterial:key.endsWith('brick')?brickMaterial:key.endsWith('dirt')?dirtMaterial:key.endsWith('tin')?tinMaterial:material); mesh.castShadow=mesh.receiveShadow=true; mesh.userData.alwaysVisible=key.startsWith('infrastructure|'); root.add(mesh); this.cityBatches.push(mesh); }
+      if (geometry) { geometry.computeBoundingSphere(); const mesh=new THREE.Mesh(geometry,key.endsWith('wet')?wetMaterial:key.endsWith('brick')?brickMaterial:key.endsWith('dirt')?dirtMaterial:key.endsWith('tin')?tinMaterial:key.endsWith('road')?roadMaterial:key.endsWith('pavement')?pavementMaterial:key.endsWith('rust')?rustMaterial:material); mesh.castShadow=mesh.receiveShadow=true; mesh.userData.alwaysVisible=key.startsWith('infrastructure|'); root.add(mesh); this.cityBatches.push(mesh); }
       geometries.forEach(g=>g.dispose());
     });
     originals.forEach(m => m.removeFromParent());
@@ -182,7 +191,7 @@ export class Game {
     const missionMessage = this.missions.interact(this.player.position);
     if (missionMessage) { if (missionMessage === 'PARCEL COLLECTED') this.police.crime(this.player.position, 1, true); this.ui.toast(missionMessage); return; }
     const loot = this.loot.nearest(this.player.position), item = this.pickups.nearest(this.player.position);
-    if (loot && (!item||loot.position.distanceToSquared(this.player.position)<item.position.distanceToSquared(this.player.position))) { const name = this.loot.collect(loot.id, this.inventory); this.audio.tone(550, .15); this.save(); this.ui.toast(`PICKED UP · ${name}`); return; }
+    if (loot && (!item||loot.position.distanceToSquared(this.player.position)<item.position.distanceToSquared(this.player.position))) { const name = this.loot.collect(loot.id, this.inventory);this.player.model.playMotion('pickup',.6,2); this.audio.tone(550, .15); this.save(); this.ui.toast(`PICKED UP · ${name}`); return; }
     if (item && this.pickups.collect(item.id)) {
       const stored = this.health >= 100;
       if (!stored) this.health = Math.min(100, this.health + 35); else this.bottles++;
@@ -209,6 +218,7 @@ export class Game {
     }
     WEAPONS.forEach((w, i) => { if (this.input.take(`Digit${i + 1}`)) this.inventory.select(w.id); });
     if (this.input.wheel) { this.inventory.cycle(Math.sign(this.input.wheel)); this.input.wheel = 0; }
+    this.player.armed=this.inventory.weapon.type==='firearm';
     this.player.update(dt, this.input, this.follow.yaw);
     this.combat.update(dt, this.input, this.camera, this.follow.yaw);
     this.effects.update(dt); this.damageFlash = Math.max(0, this.damageFlash - dt);
@@ -261,9 +271,12 @@ export class Game {
       if (this.combat.held) this.combat.held.visible=!driving;
       if (driving) {
         const open=this.vehicle.definition.kind==='motorcycle'||this.vehicle.definition.kind==='rickshaw';
-        this.player.model.poseDriving(true,open);
-        this.player.model.root.scale.setScalar(open?.9:.65);
-        const seat=new THREE.Vector3(open?0:.32,this.vehicle.definition.kind==='motorcycle'?.3:.18,.1);
+        this.player.model.animateDriving(dt,open);
+        const kind=this.vehicle.definition.kind,seatDesired=new THREE.Vector3(open?0:.32,kind==='motorcycle'?.3:.18,.1);
+        const cabinHeight=kind==='van'?2.2:kind==='rickshaw'?1.7:kind==='pickup'?1.9:1.38;
+        const fit=kind==='motorcycle'?{scale:.9,position:seatDesired}:this.player.model.fitDriving(new THREE.Vector3(-this.vehicle.definition.halfWidth+.1,.07,-this.vehicle.definition.halfLength+.2),new THREE.Vector3(this.vehicle.definition.halfWidth-.1,cabinHeight,this.vehicle.definition.halfLength-.2),open?.85:.65,seatDesired);
+        this.player.model.root.scale.setScalar(fit.scale);
+        const seat=fit.position;
         this.vehicle.model.root.updateMatrixWorld(true);this.vehicle.model.root.localToWorld(seat);
         this.player.model.root.position.copy(seat);this.player.model.root.rotation.y=this.vehicle.model.root.rotation.y;
         this.player.model.root.rotation.z=this.vehicle.model.root.rotation.z;
@@ -282,7 +295,7 @@ export class Game {
     requestAnimationFrame(this.loop);
   };
   snapshot() {
-    return { crashes:this.vehicle.crashes, lastImpact:this.vehicle.lastImpactCollider?.translation(), cityBatches:this.cityBatches.length, cityTriangles:this.cityBatches.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0), characterYaw:this.player.model.root.rotation.y, characterArm:(this.player.model.root.getObjectByName('mixamorigRightArm')??this.player.model.root.getObjectByName('mixamorig:RightArm'))?.quaternion.toArray(), lootCount:this.loot.items.length, exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, model:n.model.root.userData.asset, position:n.position.toArray(), screen:n.position.clone().add(new THREE.Vector3(0,.35,0)).project(this.camera).toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
+    return { crashes:this.vehicle.crashes, lastImpact:this.vehicle.lastImpactCollider?.translation(), cityBatches:this.cityBatches.length, cityTriangles:this.cityBatches.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0), animation:this.player.model.motion.current, animations:{...this.player.model.motion.counts}, driverBounds:this.player.model.root.userData.driverBounds, characterYaw:this.player.model.root.rotation.y, characterArm:(this.player.model.root.getObjectByName('mixamorigRightArm')??this.player.model.root.getObjectByName('mixamorig:RightArm'))?.quaternion.toArray(), lootCount:this.loot.items.length, exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, model:n.model.root.userData.asset, animation:n.model.motion.current, position:n.position.toArray(), screen:n.position.clone().add(new THREE.Vector3(0,.35,0)).project(this.camera).toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
       driving: this.player.driving, speed: this.vehicle.speed, yaw: this.vehicle.yaw, cameraYaw: this.follow.yaw, cameraPosition: this.camera.position.toArray(),
       health: this.health, cash: this.cash, bottles: this.bottles, collected: this.pickups.collected, prompt: this.prompt, distanceDriven: this.vehicle.distanceDriven,
       cameraFov: this.camera.fov, sightWeaponVisible: this.combat.sightWeapon?.visible ?? false, characterVisible: this.player.model.root.visible, cameraDistance: this.camera.position.distanceTo(this.follow.target), cameraPitch: this.follow.pitch, damageFlash: this.damageFlash,

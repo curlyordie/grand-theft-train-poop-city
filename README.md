@@ -146,11 +146,11 @@ City architecture, street dressing, signs, jokes and dialogue are created by thi
 
 ## Embedded art
 
-The offline HTML is approximately 37 MB because the glTF characters/car, photographed brick/bump/ground images and 1K HDR environment are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
+The offline HTML is approximately 100 MB because the glTF characters/car, user-selected 2K PBR surface maps, weapon meshes and the 2K HDR environment are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
 
 ### Choosing free replacement textures
 
-The current brick colour/bump photos and brown-tinted grass ground photo come from the Three.js r180 examples; the lighting HDR is Poly Haven's Venice Sunset. See `ASSET-LICENSES.md` for exact sources and attribution.
+The original Three.js brick/bump/ground maps are retained as unused references; roads now use Poly Haven Asphalt 02, pavements Worn Asphalt, and corrugated metal Worn Corrugated Iron, from the user’s 2K uploads; the lighting HDR is now the user's Poly Haven Pretville Street. See `ASSET-LICENSES.md` for exact sources and attribution.
 
 For better ground, weathered brick, rubble and rusty corrugated metal, choose assets from [Poly Haven](https://polyhaven.com/textures) or [ambientCG](https://ambientcg.com/). Both publish CC0 assets, free for commercial games without required attribution. Send the asset-page links and which surfaces they should replace. Prefer 1K or 2K JPG colour/albedo maps plus normal and roughness maps to keep the standalone HTML download manageable. Maps need material-specific tiling and colour-space settings; copying a full texture pack into the project alone does not apply it.
 
@@ -159,3 +159,13 @@ Right-click with a firearm now switches to a close sight view with a narrower fi
 The player now uses the user-supplied Mixamo **The Boss** model with embedded textures and simple authored idle/walk animation. All civilians, including civilian drivers, now use the user-supplied Mixamo **Remy** model with embedded textures and simple authored idle/walk loops; police retain Soldier. See `REQUESTED-ASSETS.md` for the texture and weapon selections still waiting for accessible files.
 
 The Boss has stronger walking arm swing and real skeleton poses for firearm holding, aiming/reloading and melee punches. Weapon attachment follows his imported hand. These remain simple project-authored poses rather than new motion-capture clips.
+
+Roads, pavements, roofs, lampposts, alleyways and building walls use the user-selected 2K colour, OpenGL normal and roughness maps. Lampposts also use a metalness map. The texture changes affect appearance; surface geometry and physics are unchanged.
+
+Remy’s authored 3.78m height is fitted to approximately 1.895m in-game, matching The Boss, including civilian drivers.
+
+Knife and Hammer replace the previous melee weapon names and meshes, using Machete and Ornate War Hammer. Handgun uses Service Pistol; the existing Shotgun slot uses the supplied Bolt Action Rifle mesh. Cars now face their driving direction. See `REQUESTED-ASSETS.md` for the complete applied mapping.
+
+### Uploaded action animation
+
+The Boss and Remy use the uploaded Mixamo clips for walking, starts, jogging, backward jogging, strafing, turns, stopping, jumping/landing, punches, melee stabs, reloads, pickups, rifle movement/fire and driving. Civilian weapon reactions play the second Start Walking clip before jogging away. Driving animation is fitted to the cabin using joint bounds and clearance for the mesh. Uploaded motion is retargeted to each skeleton, blended between actions and stored as compressed data; physical movement remains controlled by Rapier. See `REQUESTED-ASSETS.md` for the exact mapping. Closed-vehicle driver sizing is adjusted throughout the driving clip, including NPC drivers.

@@ -122,6 +122,15 @@ export class Vehicle {
     this.distanceDriven+=movement.length();
     this.body.setNextKinematicTranslation({x:p.x+movement.x,y:this.definition.halfHeight+.04,z:p.z+movement.z});
     this.model.wheels.forEach(w => w.rotation.x += this.speed * dt / .33);
+    if(this.driver&&this.driverModel){
+      const kind=this.definition.kind,open=kind==='motorcycle'||kind==='rickshaw';
+      this.driverModel.userData.animateDriving?.(dt,open);
+      if(kind!=='motorcycle'){
+        const height=kind==='van'?2.2:kind==='rickshaw'?1.7:kind==='pickup'?1.9:1.38;
+        const fit=this.driverModel.userData.fitDriving?.(new THREE.Vector3(-this.definition.halfWidth+.1,.07,-this.definition.halfLength+.2),new THREE.Vector3(this.definition.halfWidth-.1,height,this.definition.halfLength-.2),.65,new THREE.Vector3(.32,.18,.1));
+        if(fit){this.driverModel.scale.setScalar(fit.scale);this.driverModel.position.copy(fit.position);}
+      }
+    }
   }
   render(alpha:number) {
     if(!this.occupied&&!this.ai)return;

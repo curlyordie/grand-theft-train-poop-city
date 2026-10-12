@@ -3,8 +3,8 @@ export type AmmoType = 'bullets' | 'shells';
 export interface WeaponDefinition { id: WeaponId; name: string; type: 'unarmed' | 'melee' | 'firearm'; damage: number; range: number; interval: number; magazine: number; ammo?: AmmoType; reload: number; }
 export const WEAPONS: WeaponDefinition[] = [
   { id: 'fists', name: 'Unarmed', type: 'unarmed', damage: 12, range: 1.85, interval: .45, magazine: 0, reload: 0 },
-  { id: 'bat', name: 'Baseball Bat', type: 'melee', damage: 28, range: 2.5, interval: .65, magazine: 0, reload: 0 },
-  { id: 'pipe', name: 'Metal Pipe', type: 'melee', damage: 23, range: 2.3, interval: .55, magazine: 0, reload: 0 },
+  { id: 'bat', name: 'Knife', type: 'melee', damage: 28, range: 2.5, interval: .65, magazine: 0, reload: 0 },
+  { id: 'pipe', name: 'Hammer', type: 'melee', damage: 23, range: 2.3, interval: .55, magazine: 0, reload: 0 },
   { id: 'handgun', name: 'Handgun', type: 'firearm', damage: 24, range: 65, interval: .3, magazine: 12, ammo: 'bullets', reload: 1.4 },
   { id: 'shotgun', name: 'Shotgun', type: 'firearm', damage: 11, range: 35, interval: .9, magazine: 6, ammo: 'shells', reload: 2.1 },
 ];

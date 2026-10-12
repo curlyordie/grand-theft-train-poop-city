@@ -22,3 +22,32 @@ CesiumMan is retained as an unused development reference in the source tree. It 
 **The Boss**: supplied by the user as `The Boss.fbx`, with Mixamo rig naming and embedded diffuse, normal and specular maps. Converted to `src/assets/boss.glb`, preserving the character textures, with project-generated idle/walk loops and game scale/orientation adjustments. Adobe Mixamo's [FAQ](https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html) permits royalty-free character use within games. It replaces the previous Soldier mesh for the player only. The uploaded file did not include walking clips, so these are simple authored loops, not new Mixamo animations.
 
 **Remy**: supplied by the user as `Remy.fbx.zip`, downloaded by them from Adobe Mixamo. Converted to `src/assets/remy.glb` with its embedded diffuse/normal textures and project-generated idle/walk loops. It replaces Michelle and the non-police Soldier residents, including civilian drivers. The Boss remains the player; Soldier remains police. Mixamo's royalty-free game-use terms above apply. Michelle is retained as an unused source reference, no longer bundled or loaded by the game.
+
+## User-selected 2K surface materials
+
+- **Asphalt 02**, [Poly Haven source](https://polyhaven.com/a/asphalt_02), CC0: roads and broken road patches.
+- **Worn Asphalt**, [Poly Haven source](https://polyhaven.com/a/worn_asphalt), CC0: pavement slabs.
+- **Worn Corrugated Iron**, [Poly Haven source](https://polyhaven.com/a/worn_corrugated_iron), CC0: corrugated roofs and metal patches.
+
+Supplied by the user as the respective 2K Blender ZIPs. Colour, OpenGL normal and roughness maps retain 2048 × 2048 resolution and are converted to high-quality WebP for the browser. EXR data maps are converted without a colour/gamma transform; only colour maps use sRGB in-game. Geometry displacement files are not applied. Texture tiling follows world dimensions for roads/pavements and the local roof orientation for metal sheets. All maps are embedded in the standalone HTML.
+
+## Remaining user-selected assets
+
+All supplied via Poly Haven ZIPs or an EXR; Poly Haven assets are CC0.
+
+- [Rusty Metal 04](https://polyhaven.com/a/rusty_metal_04): lamppost colour, normal, roughness and metalness maps.
+- [Leaf Scattered Gravel](https://polyhaven.com/a/leaf_scattered_gravel): alleyway/ground colour, normal and roughness maps.
+- [Damaged Plaster](https://polyhaven.com/a/damaged_plaster): building-wall colour, normal and roughness maps, used in the requested stone slot.
+- [Pretville Street](https://polyhaven.com/a/pretville_street): environment EXR converted to Radiance HDR, preserving the 2048×1024 resolution and HDR illumination. Replaces Venice Sunset at runtime.
+- [Service Pistol](https://polyhaven.com/a/service_pistol): extracted one assembled pistol variant, excluding duplicate/disassembled demonstration parts.
+- [Bolt Action Rifle 7.62](https://polyhaven.com/a/bolt_action_rifle_7_62): selected assembled rifle/bolt/scope/wrap, excluding duplicate bolt and loose bullet. Used for the requested shotgun slot; existing ammunition and firing behaviour remain.
+- [Machete](https://polyhaven.com/a/machete): Knife model.
+- [Ornate War Hammer](https://polyhaven.com/a/ornate_war_hammer): Hammer model.
+
+Weapon meshes and materials are converted from Blender to embedded-texture glTF, with orientation/grip placement for gameplay. Repeated parts are batched by their original materials without replacing the photographic textures. Surface maps remain 2K; weapon maps retain the uploaded 2K or 1K resolution. HDR lighting, models and maps require no runtime asset requests. Original Three.js brick/ground maps and Venice Sunset remain unused source references.
+
+## User-supplied Mixamo animations
+
+Uploaded Mixamo clips are retargeted to The Boss and Remy and packed as compressed animation data in `src/assets/motions.bin`. Adobe Mixamo's royalty-free game-use FAQ above applies; the clips are incorporated into this game rather than supplied as a standalone animation product. Adaptations: skeleton proportions, removed horizontal root motion, limited vertical body bob, playback timing and blending to match physics, attacks and reload durations. The latest Punching (1) replaces the earlier Punching file. Both Start Walking uploads have their requested separate action mappings.
+
+The game uses the uploaded walking, starting, jogging, backward jogging, strafing, jumping/landing, stopping, direction-changing, rifle walking/turning/firing, punching, dagger-stab, reloading, pickup and driving clips. Melee attack slots share Double Dagger Stab as requested. Native Soldier idle/walk clips remain for police. Driving skeleton envelopes are fitted to each enclosed vehicle before rendering, keeping character animation outside the vehicle physics calculation.

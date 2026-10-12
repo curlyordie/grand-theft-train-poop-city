@@ -11,7 +11,7 @@ export class NPC {
   state: NPCState = 'wander'; health: number; active = false; index = 0; timer = 0; attackTimer = 0; stuck = 0; animation = 0;
   lastKnown = new THREE.Vector3();
   hurt = 0;
-  sidestep = 0;
+  sidestep = 0;reaction=0;
   targetCollider?: RAPIER.Collider;
   constructor(public id: number, public role: NPCRole, public path: THREE.Vector3[], scene: THREE.Scene, private physics: Physics) {
     this.spawn = path[0].clone(); this.position.copy(this.spawn); this.model = personModel(id, role === 'police'); scene.add(this.model.root);
@@ -22,7 +22,7 @@ export class NPC {
   }
   reset() {
     this.health = this.role === 'police' ? 90 : this.role === 'hostile' ? 70 : 55;
-    this.state = 'wander'; this.timer = 0; this.index = 0;
+    this.state = 'wander'; this.timer = 0; this.index = 0;this.reaction=0;this.model.motion.reset();
     const p = this.spawn.clone(); p.y = .82; this.body.setTranslation(p, true); this.body.setNextKinematicTranslation(p);
     this.model.root.rotation.z = 0; this.sync();
   }
@@ -51,17 +51,18 @@ export class NPC {
       else if (this.state === 'pursue' || this.state === 'search') this.state = 'search';
     } else if (this.role === 'police' && wanted === 0) this.state = 'wander';
     if (this.role === 'hostile' && distance < 10 && this.canSee(player, 12)) { this.state = 'fight'; this.lastKnown.copy(player); }
-    if (armed && distance < 7 && this.role === 'civilian' && this.state === 'wander') { this.state = 'flee'; this.timer = 5; this.lastKnown.copy(player); }
+    this.reaction=Math.max(0,this.reaction-dt);
+    if (armed && distance < 7 && this.role === 'civilian' && this.state === 'wander'&&this.canSee(player,7)) {this.reaction=.7;this.model.playMotion('reaction',.7,2); this.state = 'flee'; this.timer = 5; this.lastKnown.copy(player); }
     if (this.timer <= 0 && (this.state === 'idle' || this.state === 'flee' || this.state === 'search')) this.state = 'wander';
     let target = this.path[this.index], speed = 1.15 + this.id % 3 * .22;
     if (this.state === 'idle') speed = 0;
-    if (this.state === 'flee') { target = this.position.clone().add(this.position.clone().sub(this.lastKnown).setY(0).normalize().multiplyScalar(10)); speed = 4; }
+    if (this.state === 'flee') { target = this.position.clone().add(this.position.clone().sub(this.lastKnown).setY(0).normalize().multiplyScalar(10)); speed = this.reaction>0?.8:4; }
     if (this.state === 'fight' || this.state === 'pursue') {
       target = this.canSee(player, 45) ? player : this.lastKnown; speed = this.role === 'police' && wanted === 1 ? 2 : 4;
       if (this.role === 'police' && wanted === 1 && distance < 8) speed = 0;
       if (distance < 1.9 && this.canSee(player, 3)) {
         speed = 0;
-        if (this.attackTimer <= 0 && (this.role !== 'police' || wanted >= 2)) { this.attackTimer = 1.2; onAttack(this.role === 'police' ? 10 : 8, this); this.model.arms[0].rotation.x = 1.2; }
+        if (this.attackTimer <= 0 && (this.role !== 'police' || wanted >= 2)) { this.attackTimer = 1.2; onAttack(this.role === 'police' ? 10 : 8, this); this.model.arms[0].rotation.x = 1.2;this.model.playMotion('punch',.6,3); }
       }
     }
     if (this.state === 'search') target = this.lastKnown;
@@ -78,7 +79,7 @@ export class NPC {
     this.stuck = speed > 0 && progress < dt * .2 ? this.stuck + dt : 0;
     if (this.stuck > 1.5) { this.index = (this.index + 1) % this.path.length; this.stuck = 0; this.sidestep = 1; if (this.state === 'flee') this.lastKnown.add(new THREE.Vector3(3, 0, -3)); }
     if (progress > .001) this.model.root.rotation.y = Math.atan2(-movement.x, -movement.z);
-    this.model.animate(dt,speed);
+    this.model.animate(dt,speed,{sprint:this.state==='flee'||this.state==='pursue'});
     this.animation += dt * speed * 2; const stride = Math.sin(this.animation) * .4;
     this.model.legs[0].rotation.x = stride; this.model.legs[1].rotation.x = -stride;
     this.model.arms[0].rotation.x = THREE.MathUtils.lerp(this.model.arms[0].rotation.x, -stride, .2); this.model.arms[1].rotation.x = stride;
