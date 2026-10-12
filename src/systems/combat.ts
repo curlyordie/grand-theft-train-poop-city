@@ -37,6 +37,8 @@ export class Combat {
     else this.player.model.torso.rotation.y=0;
     if(input.aiming&&this.inventory.weapon.type==='firearm')this.player.model.arms[1].rotation.x=1.2;
     if(this.held&&this.inventory.weapon.type==='firearm')this.held.rotation.x=-this.player.model.arms[1].rotation.x;
+    if(!this.player.driving)this.player.model.poseCombat(this.inventory.weapon.type==='firearm',input.aiming,Math.sin(this.animation*Math.PI/.3),this.inventory.reloading>0);
+    if(this.held&&this.inventory.weapon.type==='firearm')this.held.rotation.x=0;
     const trigger=input.firePressed||(input.fireDown&&this.inventory.weapon.type==='firearm');input.firePressed=false;
     if(!trigger||this.player.driving||this.cooldown>0||this.inventory.reloading>0)return;
     const w=this.inventory.weapon;

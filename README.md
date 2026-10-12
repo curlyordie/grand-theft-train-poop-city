@@ -142,11 +142,11 @@ Vite's bundle-size advisory is expected because Three.js and Rapier's embedded W
 
 `src/game.ts` coordinates the loop. `src/systems/` contains input, camera, player, fleet/vehicles, traffic, NPCs, police, missions, combat, inventory, pickups/loot, effects, audio, saving and UI. `src/world/` contains modular city generation, road routes, original character/vehicle/weapon models and rigid-part batching. `scripts/build-standalone.mjs` embeds the built bundle and styles into one HTML file.
 
-All geometry, signs, jokes and dialogue are original. Rab's shirt uses green-and-white hoops without official crests or sponsor graphics. No sampled music, commercial character assets or copied franchise content are bundled. Three.js and Vite are MIT-licensed; Rapier is Apache-2.0-licensed. Dependency licence notices remain with their packages and bundle.
+City architecture, street dressing, signs, jokes and dialogue are created by this project. Imported character, car and surface assets are credited in ASSET-LICENSES.md. Sound is synthesised. Three.js and Vite are MIT-licensed; Rapier is Apache-2.0-licensed. Dependency licence notices remain with their packages and bundle.
 
 ## Embedded art
 
-The offline HTML is approximately 25 MB because the glTF characters/car, photographed brick/bump/ground images and 1K HDR environment are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
+The offline HTML is approximately 37 MB because the glTF characters/car, photographed brick/bump/ground images and 1K HDR environment are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
 
 ### Choosing free replacement textures
 
@@ -156,4 +156,6 @@ For better ground, weathered brick, rubble and rusty corrugated metal, choose as
 
 Right-click with a firearm now switches to a close sight view with a narrower field of view and a camera-mounted weapon. The player body is hidden while aiming so it cannot cover the crosshair; releasing right-click returns to third person.
 
-The player now uses the user-supplied Mixamo **The Boss** model with embedded textures and simple authored idle/walk animation. Civilian and police models remain as previously shipped. See `REQUESTED-ASSETS.md` for the texture, civilian and weapon selections still waiting for accessible files.
+The player now uses the user-supplied Mixamo **The Boss** model with embedded textures and simple authored idle/walk animation. All civilians, including civilian drivers, now use the user-supplied Mixamo **Remy** model with embedded textures and simple authored idle/walk loops; police retain Soldier. See `REQUESTED-ASSETS.md` for the texture and weapon selections still waiting for accessible files.
+
+The Boss has stronger walking arm swing and real skeleton poses for firearm holding, aiming/reloading and melee punches. Weapon attachment follows his imported hand. These remain simple project-authored poses rather than new motion-capture clips.
