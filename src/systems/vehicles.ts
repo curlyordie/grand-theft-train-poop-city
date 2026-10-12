@@ -25,6 +25,8 @@ export class Vehicle {
   yaw = 0;
   occupied = false;
   collisionCooldown = 0;
+  crashes = 0;
+  lastImpactCollider?: RAPIER.Collider;
   distanceDriven = 0;
   constructor(scene: THREE.Scene, private physics: Physics, public definition: VehicleDefinition = VEHICLE_TYPES.hatchback, public spawn = CAR_SPAWN.clone(), public id = 'hatchback') {
     this.model = vehicleModel(definition);
@@ -38,11 +40,12 @@ export class Vehicle {
     this.speed = this.yaw = this.distanceDriven = 0; this.occupied = false; this.occupantCollider = undefined;
     const position = this.spawn.clone(); position.y = this.definition.halfHeight + .06;
     this.body.setTranslation(position, true); this.body.setNextKinematicTranslation(position);
-    this.previousPosition.copy(position);this.previousYaw=0;
+    this.previousPosition.copy(position);this.previousYaw=0;this.crashes=0;this.lastImpactCollider=undefined;this.collisionCooldown=0;
     this.body.setRotation(new THREE.Quaternion(), true); this.body.setNextKinematicRotation(new THREE.Quaternion()); this.sync();
   }
   canEnter(player: Player) { return !this.occupied && player.position.distanceTo(this.position) < this.definition.halfLength + 1.9 && player.grounded && Math.abs(this.speed) < 3; }
   enableDriver(model: THREE.Group, health = 55) {
+    model.userData.poseDriving?.(true,this.definition.kind==='motorcycle'||this.definition.kind==='rickshaw');
     this.driverModel = model; this.driverHealth = health; this.driver = true; model.visible = true;
     this.driverCollider ??= this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(.22,.18).setTranslation(0,.54,.15),this.body);
     this.driverCollider.setEnabled(true);
@@ -73,10 +76,15 @@ export class Vehicle {
     }
     return 'Both doors are blocked. Move to an open stretch of road.';
   }
-  update(dt: number, input: Pick<Input, 'down'>, onCollision: (impact: number) => void) {
+  update(dt: number, input: Pick<Input, 'down'>, onCollision: (impact: number, collider?:RAPIER.Collider) => void) {
     this.previousPosition.copy(this.position);this.previousYaw=this.yaw;
     this.collisionCooldown = Math.max(0, this.collisionCooldown - dt);
     if (!this.occupied && !this.ai) return;
+    const solid=(c:RAPIER.Collider)=>{
+      if(c.handle===this.physics.ground.handle||c.parent()?.handle===this.body.handle||c.handle===this.occupantCollider?.handle)return false;
+      const shape=c.shape;
+      return !(shape instanceof RAPIER.Cuboid && c.translation().y+shape.halfExtents.y<.35);
+    };
     const accelerating = input.down('KeyW'), braking = input.down('KeyS');
     const handbrake = input.down('Space');
     if (accelerating) this.speed += (this.speed < -.3 ? this.definition.brake : this.definition.acceleration) * dt;
@@ -89,19 +97,30 @@ export class Vehicle {
     const response = Math.min(Math.abs(this.speed) / 4, 1) * (this.definition.steering - Math.min(Math.abs(this.speed) / 30, .75));
     const nextYaw = this.yaw + steering * response * Math.sign(this.speed) * dt * (handbrake ? 1.3 : 1);
     const rotation = new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP, nextYaw);
-    if (!this.physics.blocked(this.position, rotation, new RAPIER.Cuboid(this.definition.halfWidth, this.definition.halfHeight - .03, this.definition.halfLength), this.collider)) this.yaw = nextYaw;
+    if (this.physics.world.intersectionWithShape(this.position,rotation,new RAPIER.Cuboid(this.definition.halfWidth,this.definition.halfHeight-.03,this.definition.halfLength),undefined,undefined,this.collider,this.body,solid)===null) this.yaw = nextYaw;
     this.body.setRotation(new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.yaw), true);
-    const desired = new THREE.Vector3(-Math.sin(this.yaw) * this.speed * dt, -2 * dt, -Math.cos(this.yaw) * this.speed * dt);
-    this.controller.computeColliderMovement(this.collider, desired, undefined, undefined, c => c.parent()?.handle !== this.body.handle && c.handle !== this.occupantCollider?.handle);
-    const move = this.controller.computedMovement(), p = this.body.translation();
-    const progress = Math.hypot(move.x, move.z), expected = Math.hypot(desired.x, desired.z);
-    if (expected > .015 && progress < expected * .65) {
-      const impact = Math.abs(this.speed);
-      this.speed = 0;
-      if (impact > 3 && this.collisionCooldown === 0) { onCollision(impact); this.collisionCooldown = 1.5; }
+    // Cars stay on the road plane. A horizontal swept hull detects actual obstacles,
+    // rather than treating a character controller's ground correction as a crash.
+    const desired = new THREE.Vector3(-Math.sin(this.yaw)*this.speed*dt,0,-Math.cos(this.yaw)*this.speed*dt);
+    const p=this.body.translation(),distance=desired.length(),rotationNow=this.body.rotation();
+    const hit=distance>.0001?this.physics.world.castShape(p,rotationNow,desired,this.collider.shape,.012,1,false,undefined,undefined,this.collider,this.body,solid):null;
+    const movement=desired.clone();
+    if(hit){
+      const normal=new THREE.Vector3(hit.normal2.x,hit.normal2.y,hit.normal2.z).applyQuaternion(new THREE.Quaternion().copy(hit.collider.rotation() as THREE.Quaternion));
+      normal.y=0;normal.normalize();if(normal.dot(desired)>0)normal.negate();
+      const approach=Math.max(0,-desired.clone().normalize().dot(normal));
+      const fraction=Math.max(0,Math.min(1,hit.time_of_impact-.012/Math.max(distance,.012)));
+      movement.multiplyScalar(fraction);
+      // Keep tangential travel along a wall instead of repeatedly bouncing/reversing.
+      const remaining=desired.clone().multiplyScalar(1-fraction);remaining.addScaledVector(normal,-Math.min(0,remaining.dot(normal)));
+      if(remaining.lengthSq()>.000001){const from=new THREE.Vector3(p.x,p.y,p.z).add(movement);const slide=this.physics.world.castShape(from,rotationNow,remaining,this.collider.shape,.008,1,false,undefined,undefined,this.collider,this.body,solid);movement.addScaledVector(remaining,slide?Math.max(0,slide.time_of_impact-.01):1);}
+      if(approach>.3){
+        const impact=Math.abs(this.speed)*approach;this.speed*=1-approach;this.lastImpactCollider=hit.collider;
+        if(impact>3&&this.collisionCooldown===0){this.crashes++;onCollision(impact,hit.collider);this.collisionCooldown=1.5;}
+      }
     }
-    this.distanceDriven += progress;
-    this.body.setNextKinematicTranslation({ x: p.x + move.x, y: Math.max(this.definition.halfHeight + .025, p.y + move.y), z: p.z + move.z });
+    this.distanceDriven+=movement.length();
+    this.body.setNextKinematicTranslation({x:p.x+movement.x,y:this.definition.halfHeight+.04,z:p.z+movement.z});
     this.model.wheels.forEach(w => w.rotation.x += this.speed * dt / .33);
   }
   render(alpha:number) {

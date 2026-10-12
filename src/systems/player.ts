@@ -47,6 +47,7 @@ export class Player {
       this.model.root.rotation.y += Math.atan2(Math.sin(target - this.model.root.rotation.y), Math.cos(target - this.model.root.rotation.y)) * smoothing;
     }
     const moving = Math.hypot(this.velocity.x, this.velocity.z);
+    this.model.animate(dt,moving);
     this.animationTime += dt * moving * 2.1;
     const stride = this.grounded ? Math.sin(this.animationTime) * Math.min(.65, moving * .09) : .15;
     this.model.arms[0].rotation.x = stride; this.model.arms[1].rotation.x = -stride;

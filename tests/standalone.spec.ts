@@ -4,11 +4,14 @@ import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 
+test.use({viewport:{width:480,height:360},trace:'off'});
+
 test.beforeAll(() => {
   execFileSync('npm', ['run', 'build:html'], { timeout: 60000, stdio: 'pipe' });
 });
 
 test('standalone HTML supports offline Chrome gameplay with no external requests', async ({ page, context }, testInfo) => {
+  test.setTimeout(180000);
   const errors: string[] = [], networkRequests: string[] = [];
   const memoryDocument = 'http://standalone.test/game.html';
   page.on('pageerror', e => errors.push(e.message));

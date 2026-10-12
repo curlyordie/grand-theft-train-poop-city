@@ -1,8 +1,12 @@
 import * as THREE from 'three';
+import { humanModel } from './assets';
 import { box, ellipsoid, limb } from './models';
 import { compact } from './compact';
 
 export function personModel(index: number, police = false) {
+  return humanModel(index,false,police);
+}
+function legacyPersonModel(index:number,police=false){
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   const skin = ['#bc8c63', '#93674b', '#d2ab81', '#a57855'][index % 4];
   const shirt = police ? '#af9869' : ['#d3995c', '#8dabc0', '#ad5f56', '#d4c99d', '#737fa3', '#6e9c83'][index % 6];

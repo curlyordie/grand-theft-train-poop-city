@@ -1,15 +1,15 @@
 import * as THREE from 'three';
+import { importedCar } from './assets';
 import { carModel, box, cylinder, sign } from './models';
 import { compact } from './compact';
 import type { VehicleDefinition } from './vehicle-data';
 
 export function vehicleModel(definition:VehicleDefinition){
   const {kind,colour}=definition;
-  if(kind==='hatchback'||kind==='sedan'||kind==='police'){
-    const model=carModel(colour);
-    if(kind!=='hatchback') { model.root.scale.z=1.2; box(model.root,[1.68,.16,.85],[0,.96,1.24],colour); }
-    if(kind==='police'){box(model.root,[1.35,.12,.3],[0,1.57,.12],'#3e514b');box(model.root,[.55,.16,.25],[-.34,1.69,.12],'#427db0');box(model.root,[.55,.16,.25],[.34,1.69,.12],'#cf4d3e');for(const x of [-.87,.87])box(model.root,[.02,.3,1.6],[x,.8,0],'#394d45');sign(model.root,'POLICE',.9,.25,[0,.95,1.7],'#e6e1c9','#354d47');}
-    compact(model.root,new Set(model.wheels));return model;
+  if(kind==='hatchback'||kind==='sedan'||kind==='police'||kind==='suv'){
+    const real=importedCar(colour,definition.halfWidth*2,definition.halfLength*2);
+    if(kind==='police'){box(real.root,[1.1,.1,.25],[0,1.49,.1],'#343b3e');box(real.root,[.43,.12,.2],[-.25,1.6,.1],'#215fbd');box(real.root,[.43,.12,.2],[.25,1.6,.1],'#d34737');}
+    return real;
   }
   const root=new THREE.Group(),wheels:THREE.Mesh[]=[];
   const wheel=(x:number,z:number,r=.34)=>{const w=cylinder(root,r,r,.18,[x,r+.03,z],'#283731',24);w.rotation.z=Math.PI/2;wheels.push(w);const h=cylinder(root,r*.45,r*.45,.2,[x,r+.03,z],'#b5b49c',8);h.rotation.z=Math.PI/2;};
@@ -26,8 +26,8 @@ export function vehicleModel(definition:VehicleDefinition){
     box(root,[.23,.15,.03],[0,.94,-1.03],'#f0d697');
   }else{
     const length=kind==='pickup'?4.3:4.1;box(root,[1.95,.5,length],[0,.77,0],colour);
-    for(const x of [-.98,.98])for(const z of [-1.3,1.3])wheel(x,z,kind==='suv'?.41:.35);
-    if(kind==='suv'){
+    for(const x of [-.98,.98])for(const z of [-1.3,1.3])wheel(x,z,.35);
+    if(String(kind)==='suv'){
       box(root,[1.84,.9,2.95],[0,1.47,.2],colour);box(root,[1.6,.58,.03],[0,1.53,-1.29],'#365b5b');box(root,[1.6,.58,.03],[0,1.53,1.7],'#365b5b');
       for(const x of [-.932,.932])for(const z of [-.77,.16,1.06])box(root,[.025,.53,.73],[x,1.52,z],'#365b5b');
       box(root,[1.8,.12,2.6],[0,1.99,.2],'#576454');

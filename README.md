@@ -1,6 +1,6 @@
 # Grand Theft Train: Poop City
 
-An original procedural third-person crime sandbox set in fictional Sundarpur. This expansion continues the existing Vite, TypeScript, Three.js and Rapier game, preserving Rab McTavish, his ginger hair and green-and-white Celtic-style hoops, Buckfast, driving, menus and saving.
+A third-person crime sandbox with imported skinned 3D characters, a detailed car mesh, photographed materials and HDR environment lighting set in fictional Sundarpur. This expansion continues the existing Vite, TypeScript, Three.js and Rapier game, preserving Rab McTavish, his ginger hair and green-and-white Celtic-style hoops, Buckfast, driving, menus and saving.
 
 ## Play the single-file edition
 
@@ -55,17 +55,17 @@ The first click on an uncaptured viewport captures the mouse without firing. Lef
 
 ## City repair and visual update
 
-City batches normalize indexed/non-indexed geometry and retain originals until all merges succeed, preventing invisible building walls. Buildings remain in their existing positions with their original solid collision. Models now use rounded bodywork, shaped heads, capsule limbs, higher-resolution wheels and foliage. World-scale procedural weathering, rubbish bags, scattered litter/rubble, drains, brown runoff puddles and small pavement messes give streets a dirtier appearance. Dressing stays on pavement and small debris has no collision.
+City batches normalize indexed/non-indexed geometry and retain originals until all merges succeed, preventing invisible walls. The central district now has irregular clusters of brick-and-sheet shacks, lean-tos, varied roof heights, bent panels, narrower dirt lanes and broken paving. Each shack has a matching rotated solid collision hull. Imported skinned resident meshes replace the primitive people; hatchbacks, sedans, SUVs and police cars use a detailed imported car mesh sized to their collision hulls. World-scale procedural weathering, rubbish bags, scattered litter/rubble, drains, brown runoff puddles and small pavement messes give streets a dirtier appearance. Dressing stays on pavement and small debris has no collision.
 
-There are now 28 parked playable vehicles plus five traffic vehicles, and 54 weapon/ammunition pickups. Existing pickup IDs remain stable for saved games. Vehicle models interpolate physics frames; traffic brakes without repeatedly reversing into obstacles. Crash damage begins above 12 m/s and is capped at 18 health per impact with a 1.5-second cooldown. Aim/held fire continuously rotates Rab to the camera direction. R gives clear reload/full-magazine/no-reserve feedback, and selecting the same weapon preserves an ongoing reload.
+There are 28 parked playable vehicles plus five traffic vehicles, and 237 weapon/ammunition pickups with starter firearms close to Rab. Existing pickup IDs remain stable for saved games. Vehicles use horizontal swept collision hulls that exclude ground, occupants and low paving from impact detection; rotation uses the same filter. They slide tangentially along obstructions, stop into a wall and report a crash only for a genuine impact. Vehicle models interpolate physics frames; traffic brakes without repeatedly reversing into obstacles. Crash damage begins above 12 m/s and is capped at 18 health per impact with a 1.5-second cooldown. Aim/held fire continuously rotates Rab to the camera direction. R gives clear reload/full-magazine/no-reserve feedback, and selecting the same weapon preserves an ongoing reload.
 
 ## Expanded world and population
 
 - **432 × 432 metres**, with visible boundary walls at ±215 metres: over four times the usable area of the original district.
-- The original Old City remains intact. Connected roads extend into Downtown, the Industrial District, Residential neighbourhoods and the Outskirts.
+- The Old City has been rebuilt as an irregular shanty settlement; mission and road-network locations remain accessible. Connected roads extend into Downtown, the Industrial District, Residential neighbourhoods and the Outskirts.
 - Downtown has taller blocks and an elevated flyover landmark. Industry has warehouses, chimneys, freight containers and service roads. Residential areas have lower houses and courtyards; the Outskirts have dhabas, trees, dirt tracks and open space.
 - Original shops, balconies, market stalls, parked scenery, electrical wires and the freight railway remain. Substantial buildings and props have Rapier collision; ordinary roads remain unobstructed by invisible boundaries.
-- Civilians, a shopkeeper/contact, hostile guards, foot police and vehicle drivers have procedural models and behaviour. At most 22 nearby foot NPCs are active. Distant actors are hidden with disabled collision.
+- Civilians, a shopkeeper/contact, hostile guards, foot police and vehicle drivers have imported models and procedural behaviour. At most 22 nearby foot NPCs are active. Distant actors are hidden with disabled collision.
 - Foot NPCs use pavement routes, short pauses, obstruction sidesteps, greetings, fear, fleeing, fighting, investigation/search and incapacitation. E talks to the nearest living NPC. Combat produces nearby reactions and witnessed crimes.
 
 ## Combat, inventory and pickups
@@ -91,15 +91,15 @@ The six original Buckfast bottles remain. Each heals up to 35 points; at full he
 Eight playable classes have different silhouettes, acceleration, speed, braking, steering, mass configuration and collision dimensions:
 
 - Shanti 800 hatchback.
-- Sundar family sedan, with a longer body and trunk.
-- Monsoon SUV, with larger wheels and a raised cabin.
+- Sundar family sedan, with a longer collision hull and resized imported body.
+- Monsoon SUV, with a larger collision hull and resized imported body.
 - Chalo three-wheel auto-rickshaw with an open canopy.
 - Bijli two-wheel motorcycle with frame, forks and handlebars.
 - Mazdoor pickup with an open bed.
 - Parcel Pending delivery van with a box cargo compartment.
 - Sundarpur police sedan with contrasting panels and a light bar.
 
-Rab is placed in a seated/riding pose during driving. The player replaces an NPC driver when taking a stopped traffic vehicle; occupancy prevents simultaneous player control of multiple vehicles. Collisions produce feedback and can injure the player or struck pedestrians. Cars use a flat-ground kinematic arcade controller, so small collisions cannot launch them through rigid-body impulses.
+Rab is placed in a seated/riding pose during driving. The player replaces an NPC driver when taking a stopped traffic vehicle; occupancy prevents simultaneous player control of multiple vehicles. Collisions produce feedback and can injure the player or struck pedestrians. Cars use flat-ground kinematic swept hulls. Ordinary ground contact and visual pavement crossings do not generate crash events. This is arcade driving with no wheel suspension.
 
 Five traffic vehicles follow road loops, slow for corners/obstacles and react to nearby danger. They activate within a bounded distance and stop when blocked. Police use the same vehicle controller with routes based on the actual road intersections.
 
@@ -132,9 +132,9 @@ Cloud tests use `/usr/bin/chromium`; set `CHROMIUM_PATH` for another installatio
 
 ## Performance and current limitations
 
-Static geometry is batched by map cell with shared vertex-colour materials and culled by distance. Detail signs, NPCs and traffic have distance limits. Character/vehicle rigid parts are merged while preserving animated joints. Pixel ratio is capped and software WebGL disables shadows automatically; hardware rendering uses a bounded shadow map. Gameplay uses fixed 60 Hz steps with frame catch-up capped.
+Static geometry is batched by map cell with shared vertex-colour materials and culled by distance. Detail signs, NPCs and traffic have distance limits. Character/vehicle rigid parts are merged while preserving animated joints. Pixel ratio is capped and software WebGL disables shadows automatically; hardware rendering uses a bounded shadow map. Gameplay uses fixed 60 Hz steps with frame catch-up capped at 250 ms. Imported actor meshes use conservative bounds for frustum culling, and distant ground loot is hidden. Software WebGL uses lower resolution; hardware rendering retains full resolution, environment reflections and shadows.
 
-This remains a stylised arcade game: animation, character/vehicle models and synthesised audio are procedural placeholders. There is no recorded dialogue, radio soundtrack, multiplayer, gamepad/touch support, crouch/block/dodge system, vehicle suspension, destructible building interiors or advanced traffic navigation. The train and flyover deck are scenery, not additional drivable systems. Seated driver hitboxes approximate characters rather than matching every visible polygon. Dense collisions may require reversing, changing direction or leaving a vehicle; police/traffic AI uses lightweight road routing rather than a full navigation mesh. Browser-local saving depends on storage permissions. Software-rendered cloud checks do not establish performance on every desktop GPU.
+This remains a stylised arcade game: Synthesised audio and some vehicle classes remain procedural. The hatchback/sedan/SUV/police body shares one imported car asset; there is no full vehicle suspension or per-wheel animation for that mesh. Civilian leg movement is procedural over an imported skinned pose; it is not a full animation/IK system. There is no recorded dialogue, radio soundtrack, multiplayer, gamepad/touch support, crouch/block/dodge system, vehicle suspension, destructible building interiors or advanced traffic navigation. The train and flyover deck are scenery, not additional drivable systems. Seated driver hitboxes approximate characters rather than matching every visible polygon. Dense collisions may require reversing, changing direction or leaving a vehicle; police/traffic AI uses lightweight road routing rather than a full navigation mesh. Browser-local saving depends on storage permissions. Software-rendered cloud checks do not establish performance on every desktop GPU.
 
 Vite's bundle-size advisory is expected because Three.js and Rapier's embedded WebAssembly are shipped together. No external assets or credentials are required at runtime.
 
@@ -143,3 +143,7 @@ Vite's bundle-size advisory is expected because Three.js and Rapier's embedded W
 `src/game.ts` coordinates the loop. `src/systems/` contains input, camera, player, fleet/vehicles, traffic, NPCs, police, missions, combat, inventory, pickups/loot, effects, audio, saving and UI. `src/world/` contains modular city generation, road routes, original character/vehicle/weapon models and rigid-part batching. `scripts/build-standalone.mjs` embeds the built bundle and styles into one HTML file.
 
 All geometry, signs, jokes and dialogue are original. Rab's shirt uses green-and-white hoops without official crests or sponsor graphics. No sampled music, commercial character assets or copied franchise content are bundled. Three.js and Vite are MIT-licensed; Rapier is Apache-2.0-licensed. Dependency licence notices remain with their packages and bundle.
+
+## Embedded art
+
+The offline HTML is approximately 25 MB because the glTF characters/car, photographed brick/bump/ground images and 1K HDR environment are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.

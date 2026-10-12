@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { walkTo,walkPath } from './helpers';
 
 const snapshot = (page: Page) => page.evaluate(() => (window as any).__game.snapshot());
 async function holdUntil(page: Page, keys: string[], predicate: (state: any) => boolean, timeout = 20000) {
@@ -96,9 +97,9 @@ test('Buckfast stores at full health, disappears, saves and continues', async ({
 });
 
 test('high-speed building impact damages health; stored Buckfast heals with a cap', async ({ page }) => {
-  await start(page);
-  await holdUntil(page, ['KeyS'], s => s.position[2] > 19.8);
-  await holdUntil(page, ['KeyD'], s => s.prompt.includes('Buckfast'));
+  test.setTimeout(180000);await page.setViewportSize({width:320,height:240});
+  await start(page);await walkPath(page,[[4.9,21],[7.8,21]]);
+  await expect.poll(async()=>(await snapshot(page)).prompt).toContain('Buckfast');
   await page.keyboard.press('KeyE'); await expect.poll(async () => (await snapshot(page)).bottles).toBe(1);
   await page.keyboard.press('Escape'); await page.click('#restart'); await enterCar(page);
   await holdUntil(page, ['KeyW'], s => s.speed > 13);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { compact } from '../world/compact';
 import { weaponModel } from '../world/weapons';
 import { box } from '../world/models';
 import { Inventory, WEAPONS, type WeaponId, type AmmoType } from './inventory';
@@ -15,6 +16,13 @@ for(const x of [-144,-96,-48,0,48,96,144])for(const z of [-65,65,115]){
   LOCATIONS.push({kind,x:x-5.3,z});
   LOCATIONS.push({kind:n%4===3?'shells':'bullets',x:x-5.3,z:z+2});
 }
+// Dense, reachable pavement stashes, including a starter cache beside Rab's spawn.
+for(const x of [-144,-96,-48,0,48,96,144])for(const z of [-180,-150,-120,-90,-60,-30,0,30,60,90,120,150,180]){
+  const n=LOCATIONS.length;const kind:WeaponId=['handgun','shotgun','bat','pipe'][Math.floor(n/2)%4] as WeaponId;
+  if(x===0&&Math.abs(z-30)<3)continue;
+  LOCATIONS.push({kind,x:x+7.4,z:z+10});LOCATIONS.push({kind:kind==='shotgun'?'shells':'bullets',x:x+7.4,z:z+12.5});
+}
+LOCATIONS.push({kind:'handgun',x:5.2,z:18},{kind:'bullets',x:5.2,z:21},{kind:'shotgun',x:5.2,z:24});
 export class Loot {
   items = LOCATIONS.map((data, id) => ({...data, id, taken:false, root: new THREE.Group(), position:new THREE.Vector3(data.x,0,data.z)}));
   constructor(scene: THREE.Scene) {
@@ -23,8 +31,10 @@ export class Loot {
       const pad = new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.04,12),new THREE.MeshBasicMaterial({color:'#c6b06b'}));item.root.add(pad);
       if (item.kind === 'bullets' || item.kind === 'shells') { box(item.root,[.45,.25,.3],[0,.13,0],item.kind === 'bullets' ? '#738052' : '#ad7250'); box(item.root,[.05,.26,.31],[0,.13,0],'#e1cd9e'); }
       else { const model = weaponModel(item.kind); model.rotation.x = Math.PI/2; model.rotation.z = .4; model.position.y = .13; item.root.add(model); }
+      compact(item.root);
     });
   }
+  update(position:THREE.Vector3){this.items.forEach(i=>{i.root.visible=!i.taken&&i.position.distanceToSquared(position)<100*100;});}
   nearest(position:THREE.Vector3) {return this.items.filter(i=>!i.taken && Math.hypot(i.x-position.x,i.z-position.z)<2.6).sort((a,b)=>a.position.distanceToSquared(position)-b.position.distanceToSquared(position))[0];}
   getName(kind:WeaponId|AmmoType){return kind==='bullets'?'Handgun ammunition':kind==='shells'?'Shotgun shells':WEAPONS.find(w=>w.id===kind)!.name;}
   collect(id:number,inventory:Inventory){const item=this.items[id];if(!item||item.taken)return '';item.taken=true;item.root.visible=false;if(item.kind==='bullets'||item.kind==='shells')inventory.reserve[item.kind]+=item.kind==='bullets'?24:12;else inventory.acquire(item.kind);return this.getName(item.kind);}

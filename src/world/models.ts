@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { humanModel } from './assets';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const materials = new Map<string, THREE.MeshStandardMaterial>();
@@ -38,7 +39,8 @@ export function sign(parent: THREE.Object3D, text: string, width: number, height
   mesh.position.set(...pos as [number, number, number]); parent.add(mesh); return mesh;
 }
 
-export function rabModel() {
+export function rabModel() {return humanModel(0,true);}
+function legacyRabModel() {
   const root = new THREE.Group();
   const hips = box(root, [.44, .22, .27], [0, .81, 0], '#2b3031');
   const torso = new THREE.Group(); torso.position.y = .92; root.add(torso);

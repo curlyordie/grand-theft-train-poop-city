@@ -78,6 +78,7 @@ export class NPC {
     this.stuck = speed > 0 && progress < dt * .2 ? this.stuck + dt : 0;
     if (this.stuck > 1.5) { this.index = (this.index + 1) % this.path.length; this.stuck = 0; this.sidestep = 1; if (this.state === 'flee') this.lastKnown.add(new THREE.Vector3(3, 0, -3)); }
     if (progress > .001) this.model.root.rotation.y = Math.atan2(-movement.x, -movement.z);
+    this.model.animate(dt,speed);
     this.animation += dt * speed * 2; const stride = Math.sin(this.animation) * .4;
     this.model.legs[0].rotation.x = stride; this.model.legs[1].rotation.x = -stride;
     this.model.arms[0].rotation.x = THREE.MathUtils.lerp(this.model.arms[0].rotation.x, -stride, .2); this.model.arms[1].rotation.x = stride;

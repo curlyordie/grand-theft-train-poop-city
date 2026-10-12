@@ -1,9 +1,10 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { loadAssets } from './world/assets';
 import { Game } from './game';
 import './style.css';
 
 async function initialise() {
-  try { await RAPIER.init(); new Game(); }
+  try { await Promise.all([RAPIER.init(),loadAssets()]); new Game(); }
   catch (error) {
     console.error('Game initialisation failed:', error);
     const app = document.querySelector('#app')!; app.replaceChildren();

@@ -17,15 +17,21 @@ export class City {
   root = new THREE.Group();
   constructor(scene: THREE.Scene, private physics: Physics) {
     scene.add(this.root);
-    box(this.root, [WORLD_SIZE, .12, WORLD_SIZE], [0, -.06, 0], '#b2a178');
+    box(this.root, [WORLD_SIZE, .12, WORLD_SIZE], [0, -.06, 0], '#80735b').userData.surface='dirt';
     for (const a of ROAD_CENTRES) {
-      box(this.root, [12, .018, 428], [a, .01, 0], '#565d58');
-      box(this.root, [428, .018, 12], [0, .014, a], '#565d58');
-      for (const side of [-1, 1]) {
-        box(this.root, [2.5, .12, 428], [a + side * 7.25, .045, 0], '#c6b698');
-        box(this.root, [428, .12, 2.5], [0, .045, a + side * 7.25], '#c6b698');
+      box(this.root, [Math.abs(a)<96?8:12, .018, 428], [a, .01, 0], '#4d4940').userData.surface='dirt';
+      box(this.root, [428, .018, Math.abs(a)<96?8:12], [0, .014, a], '#4d4940').userData.surface='dirt';
+      for(const side of [-1,1]){
+        if(Math.abs(a)>=96){box(this.root,[2.5,.12,428],[a+side*7.25,.045,0],'#b4a58a');box(this.root,[428,.12,2.5],[0,.045,a+side*7.25],'#b4a58a');}
+        else for(let p=-210;p<216;p+=14){const offset=side*(7.25+Math.sin(p*.12)*.25),width=1.1+Math.abs(Math.sin(p*.3))*.3;const v=box(this.root,[width,.12,12.3],[a+offset,.045,p],'#a4987e');v.rotation.y=Math.sin(p*.7)*.035;const h=box(this.root,[12.3,.12,width],[p,.045,a+offset],'#a4987e');h.rotation.y=Math.sin(p*.7)*.035;}
+      }
+      if(Math.abs(a)<96)for(let p=-90;p<96;p+=9){
+        const width=8.5+Math.sin(p*.13+a)*1.5,offset=Math.sin(p*.071+a)*1.3;
+        box(this.root,[width,.016,10],[a+offset,.04,p],'#665a43').userData.surface='dirt';
+        box(this.root,[10,.016,width],[p,.045,a+offset],'#665a43').userData.surface='dirt';
       }
       for (let p = -210; p < 216; p += 6) {
+        if(Math.abs(a)<96&&Math.abs(p)<96)continue;
         if (ROAD_CENTRES.some(v => Math.abs(v - p) < 8)) continue;
         box(this.root, [.12, .015, 2.5], [a, .03, p], '#dfcfa0');
         box(this.root, [2.5, .015, .12], [p, .035, a], '#dfcfa0');
@@ -66,21 +72,15 @@ export class City {
       box(this.root, [.9, 6, .9], [x, 3, z], '#9d9b84');
       physics.fixedBox(new THREE.Vector3(x, 3, z), new THREE.Vector3(.45, 3, .45));
     }
-    // Pavement crossings: leave the ordinary roads free of collision geometry.
-    for (const x of [-48, 0, 48]) for (const z of [-48, 0, 48]) {
-      for (let i = 0; i < 7; i++) {
-        box(this.root, [.7, .016, 2.2], [x - 4.5 + i * 1.4, .04, z + 8.5], '#e2d7b4');
-        box(this.root, [2.2, .016, .7], [x + 8.5, .04, z - 4.5 + i * 1.4], '#e2d7b4');
-      }
-    }
+    // Old City has worn, broken paving rather than formal zebra crossings.
     index = 0;
-    for (const x of [-72, -24, 24, 72]) for (const z of [-72, -24, 24, 72]) {
-      for (const side of [-1, 1]) for (const offset of [-7, 7]) {
-        const h = x < 0 ? 11 + index % 4 * 2.8 : 7 + index % 3 * 2.5;
-        this.building(x + side * 10, z + offset, 11, 8, h, side === -1 ? -Math.PI / 2 : Math.PI / 2, index++, physics);
+    for(const x of [-72,-24,24,72])for(const z of [-72,-24,24,72]){
+      for(const side of [-1,1])for(const dz of [-10,0,10]){
+        const id=index++,jitter=Math.sin(id*7.19)*1.7;
+        this.shack(x+side*(10+Math.cos(id*4.3)*1.4),z+dz+jitter,6+id%3,5+id%4,2.7+id%3*.55,id);
       }
-      // A courtyard with a shade tree, accessed through gaps between buildings.
-      this.tree(x, z, 1.2);
+      this.shack(x+Math.sin(index)*2,z+Math.cos(index)*3,5,6,2.9,index++);
+      if(index%2)this.tree(x+5,z-4,.85);
     }
     // A characteristic bazaar running along the central road.
     for (const z of [-34, -19, 26, 38, 60]) this.stall(-7.5, z, z % 3 === 0 ? '#b65b3f' : '#d6a54c');
@@ -114,9 +114,27 @@ export class City {
       const angle = i / 22 * Math.PI * 2; mountain.position.set(Math.cos(angle) * 315, 3, Math.sin(angle) * 315); mountain.rotation.y = i; this.root.add(mountain);
     }
   }
+  shack(x:number,z:number,w:number,d:number,h:number,id:number){
+    const g=new THREE.Group();g.position.set(x,0,z);const angle=Math.sin(id*3.4)*.11;g.rotation.y=angle;this.root.add(g);
+    const wall=box(g,[w,h,d],[0,h/2,0],['#b7a98e','#bca58c','#a5a18a','#a69b83'][id%4]);wall.userData.surface='brick';
+    // Patched timber doors, mixed sheet roofs, uneven additions and hand-built structural poles.
+    box(g,[1.05,1.9,.08],[-w*.2,.98,-d/2-.06],'#4a392a');
+    const window=box(g,[1.2,.8,.075],[w*.24,1.65,-d/2-.065],'#1b2828');
+    for(const s of [-1,1])box(g,[.07,.95,.14],[w*.24+s*.65,1.65,-d/2-.08],'#8c7555');
+    for(let n=0;n<Math.ceil(w/.8);n++){
+      const roof=box(g,[.85,.045,d+1],[(-w/2+.4)+n*.8,h+.12+(n%3)*.025,0],['#76644e','#9a8975','#6f7774','#8e5f3d'][(id+n)%4]);roof.rotation.x=(id%2?1:-1)*.12;roof.userData.surface='tin';
+      // Raised corrugation ribs create true geometry and highlights, not painted stripes.
+      for(const dx of [-.28,-.1,.1,.28]){const rib=box(g,[.024,.035,d+1],[-w/2+.4+n*.8+dx,h+.16,0],'#827460');rib.rotation.x=roof.rotation.x;rib.userData.surface='tin';}
+    }
+    if(id%3!==0){const lean=box(g,[w*.48,.06,2.1],[w*.15,h-.35,-d/2-1],'#596454');lean.rotation.x=-.17;lean.userData.surface='tin';for(const dx of [-w*.1,w*.4])cylinder(g,.035,.045,h-.5,[dx,(h-.5)/2,-d/2-1.75],'#6c5438');}
+    if(id%4===0){sign(g,['REPAIRS • CASH ONLY','ROOMS • ASK INSIDE','CHAI & CHARGING','SCRAP • BUY & SELL'][id%4],w*.65,.45,[0,2.3,-d/2-.1],'#3f4c3b').rotation.y=Math.PI;}
+    for(let n=0;n<3;n++){const patch=box(g,[.5+Math.abs(Math.sin(id+n)),.6,.06],[-w/2+.8+n*1.6,1.1+n*.2,d/2+.04],n%2?'#92806b':'#6e715d');patch.rotation.z=Math.sin(id+n)*.08;patch.userData.surface='tin';}
+    const collider=this.physics.fixedBox(new THREE.Vector3(x,h/2,z),new THREE.Vector3(w/2,h/2,d/2));collider.setRotation(new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP,angle));
+    if(id%2===0){const wire=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x-w/2,h+.3,z),new THREE.Vector3(x-w/2-1,h-.3,z+2),new THREE.Vector3(x-w/2-2,h+.1,z+4)]),new THREE.LineBasicMaterial({color:'#292b27'}));this.root.add(wire);}
+  }
   warehouse(x: number, z: number, i: number, physics: Physics) {
     const g = new THREE.Group(); g.position.set(x, 0, z); this.root.add(g);
-    box(g, [14, 7, 27], [0, 3.5, 0], i % 2 ? '#918a72' : '#ab8164');
+    box(g, [14, 7, 27], [0, 3.5, 0], i % 2 ? '#918a72' : '#ab8164').userData.surface='brick';
     box(g, [14.5, .4, 27.5], [0, 7.2, 0], '#5f7066');
     for (let dz = -10; dz < 12; dz += 5) box(g, [.04, 3.8, 2.9], [-7.04, 2.3, dz], '#525e56');
     sign(g, 'FREIGHT • NOTHING TO DECLARE', 11, 1, [0, 5.8, 13.6], '#485d50', '#efe2bd', 30);
@@ -125,7 +143,7 @@ export class City {
   }
   building(x: number, z: number, w: number, d: number, h: number, angle: number, i: number, physics: Physics) {
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = angle; this.root.add(g);
-    box(g, [w, h, d], [0, h / 2, 0], colours[i % colours.length]);
+    box(g, [w, h, d], [0, h / 2, 0], colours[i % colours.length]).userData.surface='brick';
     box(g, [w + .25, .28, d + .3], [0, h, 0], '#e5d2ad');
     box(g, [w + .05, .7, d + .04], [0, .35, 0], '#88755f');
     for (let y = 4.3; y < h - 1; y += 2.7) for (const bx of [-3.7, 0, 3.7]) {

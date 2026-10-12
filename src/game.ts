@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { environment, brick, bump, ground } from './world/assets';
 import { grimeTexture } from './world/grit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { City, SAFEHOUSE, SPAWN } from './world/city';
@@ -61,13 +62,15 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); this.renderer.setSize(innerWidth, innerHeight);
     const gl = this.renderer.getContext(); const info = gl.getExtension('WEBGL_debug_renderer_info');
     const software = info && /swiftshader|llvmpipe|software/i.test(String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)));
+    if(software)this.renderer.setPixelRatio(.65);
     this.renderer.shadowMap.enabled = !software; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = .95;
     const canvas = this.renderer.domElement; canvas.id = 'scene'; canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Grand Theft Train: Poop City — 3D game');
     document.querySelector('#app')!.replaceChildren(canvas);
-    this.scene.background = new THREE.Color('#aaa895'); this.scene.fog = new THREE.Fog('#aaa895', 65, 220);
-    this.scene.add(new THREE.HemisphereLight('#dfdfd1', '#555348', 1.4));
-    const sun = new THREE.DirectionalLight('#e5dbbd', 2.3); sun.position.set(-34, 58, 30); sun.castShadow = true;
+    const pmrem=new THREE.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromEquirectangular(environment).texture;pmrem.dispose();this.scene.environmentIntensity=.55;this.scene.background=environment;this.scene.backgroundBlurriness=.35;
+     this.scene.fog = new THREE.Fog('#aaa895', 65, 220);
+    this.scene.add(new THREE.HemisphereLight('#ded9c7', '#373127', .5));
+    const sun = new THREE.DirectionalLight('#ffe0af', 2.8); sun.position.set(-34, 58, 30); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -75; sun.shadow.camera.right = 75; sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 160; sun.shadow.normalBias = .09; sun.shadow.bias = -.0006; this.scene.add(sun);
     const city = new City(this.scene, this.physics); this.batchCity(city.root);
@@ -119,7 +122,7 @@ export class Game {
       }
       geometry.computeBoundingBox(); const size = geometry.boundingBox!.getSize(new THREE.Vector3()), centre = geometry.boundingBox!.getCenter(new THREE.Vector3());
       const cell = Math.max(size.x, size.z) > 100 ? 'infrastructure' : `${Math.floor(centre.x / 48)},${Math.floor(centre.z / 48)}`;
-      const key = `${cell}|${object.material.roughness<.4?'wet':'dry'}`;
+      const key = `${cell}|${object.userData.surface??(object.material.roughness<.4?'wet':'dry')}`;
       const count = geometry.attributes.position.count, colour = object.material.color, colours = new Float32Array(count * 3);
       for (let i=0;i<count;i++) { colours[i*3]=colour.r; colours[i*3+1]=colour.g; colours[i*3+2]=colour.b; }
       geometry.setAttribute('color', new THREE.BufferAttribute(colours,3));
@@ -127,11 +130,14 @@ export class Game {
     });
 
     const material = new THREE.MeshStandardMaterial({vertexColors:true,flatShading:false,roughness:.95,map:grimeTexture()});
+    const brickMaterial=new THREE.MeshStandardMaterial({vertexColors:true,map:brick,bumpMap:bump,bumpScale:.045,roughness:.93});
+    const dirtMaterial=new THREE.MeshStandardMaterial({vertexColors:true,map:ground,roughness:.98});
+    const tinMaterial=new THREE.MeshStandardMaterial({vertexColors:true,map:grimeTexture(),bumpMap:bump,bumpScale:.015,metalness:.65,roughness:.58});
     const wetMaterial=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.24,metalness:.18});
     buckets.forEach((geometries,key) => {
       const geometry = mergeGeometries(geometries,false);
       if (!geometry) throw new Error(`City geometry merge failed: ${key}`);
-      if (geometry) { geometry.computeBoundingSphere(); const mesh=new THREE.Mesh(geometry,key.endsWith('wet')?wetMaterial:material); mesh.castShadow=mesh.receiveShadow=true; mesh.userData.alwaysVisible=key.startsWith('infrastructure|'); root.add(mesh); this.cityBatches.push(mesh); }
+      if (geometry) { geometry.computeBoundingSphere(); const mesh=new THREE.Mesh(geometry,key.endsWith('wet')?wetMaterial:key.endsWith('brick')?brickMaterial:key.endsWith('dirt')?dirtMaterial:key.endsWith('tin')?tinMaterial:material); mesh.castShadow=mesh.receiveShadow=true; mesh.userData.alwaysVisible=key.startsWith('infrastructure|'); root.add(mesh); this.cityBatches.push(mesh); }
       geometries.forEach(g=>g.dispose());
     });
     originals.forEach(m => m.removeFromParent());
@@ -175,9 +181,8 @@ export class Game {
     }
     const missionMessage = this.missions.interact(this.player.position);
     if (missionMessage) { if (missionMessage === 'PARCEL COLLECTED') this.police.crime(this.player.position, 1, true); this.ui.toast(missionMessage); return; }
-    const loot = this.loot.nearest(this.player.position);
-    if (loot) { const name = this.loot.collect(loot.id, this.inventory); this.audio.tone(550, .15); this.save(); this.ui.toast(`PICKED UP · ${name}`); return; }
-    const item = this.pickups.nearest(this.player.position);
+    const loot = this.loot.nearest(this.player.position), item = this.pickups.nearest(this.player.position);
+    if (loot && (!item||loot.position.distanceToSquared(this.player.position)<item.position.distanceToSquared(this.player.position))) { const name = this.loot.collect(loot.id, this.inventory); this.audio.tone(550, .15); this.save(); this.ui.toast(`PICKED UP · ${name}`); return; }
     if (item && this.pickups.collect(item.id)) {
       const stored = this.health >= 100;
       if (!stored) this.health = Math.min(100, this.health + 35); else this.bottles++;
@@ -207,12 +212,9 @@ export class Game {
     this.player.update(dt, this.input, this.follow.yaw);
     this.combat.update(dt, this.input, this.camera, this.follow.yaw);
     this.effects.update(dt); this.damageFlash = Math.max(0, this.damageFlash - dt);
-    this.fleet.update(dt, this.input, impact => {
-      for (let i=0;i<this.vehicle.controller.numComputedCollisions();i++) {
-        const collider=this.vehicle.controller.computedCollision(i)?.collider;
-        const npc=this.npcs.npcs.find(n=>n.active&&n.health>0&&n.collider.handle===collider?.handle);
-        if (npc) { this.combat.hit(npc,Math.min(60,impact*5),npc.position.clone().add(new THREE.Vector3(0,.5,0)),new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))); if(npc.health>0)npc.state='flee'; }
-      }
+    this.fleet.update(dt, this.input, (impact, collider) => {
+      const npc=this.npcs.npcs.find(n=>n.active&&n.health>0&&n.collider.handle===collider?.handle);
+      if(npc){this.combat.hit(npc,Math.min(60,impact*5),npc.position.clone().add(new THREE.Vector3(0,.5,0)),new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw)));if(npc.health>0)npc.state='flee';}
       this.audio.tone(70, .25, 'sawtooth', .35); this.damagePlayer(Math.min(18, Math.ceil(Math.max(0, impact - 12) * .65)), this.vehicle.position.clone().add(new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))));
       this.ui.toast('THAT’LL BUFF OUT', '“That’s somebody else’s problem now.”');
     });
@@ -229,15 +231,17 @@ export class Game {
     }
     const motor = this.fleet.vehicles.find(v=>v.id==='mission-sedan'); if(motor)this.missions.motorPosition.copy(motor.position).y=0;
     this.missions.update(dt, { position: this.player.position, vehicleId: this.player.driving ? this.vehicle.id : null, speed: this.vehicle.speed, wanted: this.police.level });
+    const nearLoot=this.loot.nearest(this.player.position),nearBottle=this.pickups.nearest(this.player.position);
+    const preferLoot=nearLoot&&(!nearBottle||nearLoot.position.distanceToSquared(this.player.position)<nearBottle.position.distanceToSquared(this.player.position));
     this.prompt = this.player.driving ? Math.abs(this.vehicle.speed) > 3 ? '' : `Exit the ${this.vehicle.definition.name}` :
-      this.missions.interaction(this.player.position) || (this.loot.nearest(this.player.position) ? `Pick up ${this.loot.getName(this.loot.nearest(this.player.position)!.kind)}` : this.pickups.nearest(this.player.position) ? 'Collect Buckfast · +35 health / store' :
+      this.missions.interaction(this.player.position) || (preferLoot ? `Pick up ${this.loot.getName(nearLoot!.kind)}` : this.pickups.nearest(this.player.position) ? 'Collect Buckfast · +35 health / store' :
         this.player.position.clone().setY(0).distanceTo(SAFEHOUSE) < 2.2 ? 'Save at Rab’s rooms · restore health' :
           this.fleet.nearest(this.player) ? `Enter the ${this.fleet.nearest(this.player)!.definition.name}` : this.npcs.nearest(this.player.position) ? 'Talk to local (E)' : '');
     this.footstepTime += dt;
     if (!this.player.driving && this.player.grounded && this.player.velocity.clone().setY(0).length() > 1 && this.footstepTime > .32) { this.audio.tone(110, .045, 'triangle', .07); this.footstepTime = 0; }
   }
   loop = (time: number) => {
-    const dt = Math.min((time - this.lastTime) / 1000 || 0, .1); this.lastTime = time;
+    const dt = Math.min((time - this.lastTime) / 1000 || 0, .25); this.lastTime = time;
     if (this.input.take('Escape')) {
       if (this.running) this.pause();
       else if (this.started && this.ui.page === 'pause') this.resume();
@@ -257,26 +261,28 @@ export class Game {
       if (this.combat.held) this.combat.held.visible=!driving;
       if (driving) {
         const open=this.vehicle.definition.kind==='motorcycle'||this.vehicle.definition.kind==='rickshaw';
+        this.player.model.poseDriving(true,open);
         this.player.model.root.scale.setScalar(open?.9:.65);
         const seat=new THREE.Vector3(open?0:.32,this.vehicle.definition.kind==='motorcycle'?.3:.18,.1);
         this.vehicle.model.root.updateMatrixWorld(true);this.vehicle.model.root.localToWorld(seat);
         this.player.model.root.position.copy(seat);this.player.model.root.rotation.y=this.vehicle.model.root.rotation.y;
         this.player.model.root.rotation.z=this.vehicle.model.root.rotation.z;
         this.player.model.legs.forEach(leg=>leg.rotation.x=.7);this.player.model.arms.forEach(arm=>arm.rotation.x=.9);
-      } else {this.player.model.root.scale.setScalar(1);this.player.model.root.rotation.z=0;}
+      } else {this.player.model.poseDriving(false);this.player.model.root.scale.setScalar(1);this.player.model.root.rotation.z=0;}
       this.audio.updateEngine(this.vehicle.speed, driving);
       this.ui.update(dt, { player: this.player.position, car: this.vehicle.position, yaw: this.follow.yaw, driving, speed: this.vehicle.speed, health: this.health, cash: this.cash, bottles: this.bottles, prompt: this.prompt, collected: this.pickups.collected.length, distanceDriven: this.vehicle.distanceDriven, missionName: this.missions.name, objective: this.missions.objective, vehicleName: this.vehicle.definition.name, weapon: this.inventory.weapon.name, ammo: this.inventory.weapon.ammo ? `${this.inventory.magazine} / ${this.inventory.reserve[this.inventory.weapon.ammo]}` : 'MELEE', reloading: this.inventory.reloading > 0, damageFlash: this.damageFlash, wanted: this.police.level, searching: !this.police.seen, missionTarget: this.missions.target, locked: this.input.locked });
     } else if (!this.started || this.ui.page === 'menu') {
       this.camera.position.set(2 + Math.sin(time * .00007) * .5, 8.5, 35); this.camera.lookAt(2, 2, -15);
     }
     const location=this.running?this.player.position:new THREE.Vector3(2,0,15);
+    this.loot.update(location);
     this.cityBatches.forEach(mesh=>{const bound=mesh.geometry.boundingSphere!;mesh.visible=mesh.userData.alwaysVisible||bound.center.distanceTo(location)<160+bound.radius;});
     this.cityDetails.forEach(object=>{object.visible=object.getWorldPosition(new THREE.Vector3()).distanceTo(location)<135;});
     this.renderer.render(this.scene, this.camera); this.frame++;
     requestAnimationFrame(this.loop);
   };
   snapshot() {
-    return { cityBatches:this.cityBatches.length, cityTriangles:this.cityBatches.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0), characterYaw:this.player.model.root.rotation.y, lootCount:this.loot.items.length, exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, position:n.position.toArray(), screen:n.position.clone().add(new THREE.Vector3(0,.35,0)).project(this.camera).toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
+    return { crashes:this.vehicle.crashes, lastImpact:this.vehicle.lastImpactCollider?.translation(), cityBatches:this.cityBatches.length, cityTriangles:this.cityBatches.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0), characterYaw:this.player.model.root.rotation.y, lootCount:this.loot.items.length, exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, position:n.position.toArray(), screen:n.position.clone().add(new THREE.Vector3(0,.35,0)).project(this.camera).toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
       driving: this.player.driving, speed: this.vehicle.speed, yaw: this.vehicle.yaw, cameraYaw: this.follow.yaw, cameraPosition: this.camera.position.toArray(),
       health: this.health, cash: this.cash, bottles: this.bottles, collected: this.pickups.collected, prompt: this.prompt, distanceDriven: this.vehicle.distanceDriven,
       characterVisible: this.player.model.root.visible, cameraDistance: this.camera.position.distanceTo(this.follow.target), cameraPitch: this.follow.pitch, damageFlash: this.damageFlash,
