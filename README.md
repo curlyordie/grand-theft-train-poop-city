@@ -44,7 +44,7 @@ Cloud installations use `npm ci --cache /workspace/.npm-cache --no-audit --no-fu
 | Left click | Punch, swing the equipped melee weapon, or fire |
 | Right click | Shoulder-camera aiming with a firearm |
 | R | Reload the equipped firearm from its matching reserve |
-| 1 / 2 / 3 / 4 / 5 | Unarmed / bat / pipe / handgun / shotgun, if owned |
+| 1 / 2 / 3 / 4 / 5 | Unarmed / Knife / Hammer / handgun / shotgun, if owned |
 | Mouse wheel | Cycle through owned weapons |
 | Tab | Weapon inventory; close and resume with Tab or Back to Streets |
 | B | Consume stored Buckfast when injured |
@@ -70,13 +70,13 @@ There are 28 parked playable vehicles plus five traffic vehicles, and 237 weapon
 
 ## Combat, inventory and pickups
 
-New games begin **unarmed**, with no firearms or reserve ammunition. Exploration unlocks equipment through visible ground pickups. There are bats, industrial pipes, handguns, rare shotguns, bullet boxes and shell boxes in multiple districts.
+New games begin **unarmed**, with no firearms or reserve ammunition. Exploration unlocks equipment through visible ground pickups. There are knives, hammers, handguns, shotguns, bullet boxes and shell boxes in multiple districts.
 
 | Weapon | Damage | Range | Magazine | Reload |
 | --- | --- | --- | --- | --- |
 | Fists | 12 | 1.85 m | — | — |
-| Baseball bat | 28 | 2.5 m | — | — |
-| Metal pipe | 23 | 2.3 m | — | — |
+| Knife | 28 | 2.5 m | — | — |
+| Hammer | 23 | 2.3 m | — | — |
 | Handgun | 24 before falloff | 65 m | 12 bullets | 1.4 s |
 | Shotgun | 6 × 11 before falloff | 35 m | 6 shells | 2.1 s |
 
@@ -128,13 +128,13 @@ npm test -- --grep standalone
 
 Playwright runs the real WebGL game with one worker. Tests use keyboard/mouse inputs and read-only development diagnostics, not teleport commands or invented mission completions. Coverage includes pointer lock, movement/jump/camera collision, menus, NPC movement/dialogue, melee and gun damage, wall blocking, inventory ownership, both ammo types, reloads, incapacitation, driver hitboxes, all eight vehicle classes, traffic movement, five districts, all three missions, police search/escape, rewards and persistence.
 
-Cloud tests use `/usr/bin/chromium`; set `CHROMIUM_PATH` for another installation. Tests retain traces/screenshots on failure in ignored `test-results/`. The standalone suite rebuilds its HTML automatically. Managed cloud Chrome blocks file URLs, so that suite may supply the exact embedded HTML from memory at an allowed origin, with network offline. This checks offline gameplay without overriding browser policy, but does not verify file navigation on that managed machine.
+Cloud tests use `/usr/bin/chromium`; set `CHROMIUM_PATH` for another installation. Tests retain traces/screenshots on failure in ignored `test-results/`. The standalone suite rebuilds its HTML automatically. Managed cloud Chrome blocks file URLs, so that suite streams the exact embedded HTML over loopback, then runs gameplay with the network offline. This checks offline gameplay without overriding browser policy, but does not verify file navigation on that managed machine.
 
 ## Performance and current limitations
 
 Static geometry is batched by map cell with shared vertex-colour materials and culled by distance. Detail signs, NPCs and traffic have distance limits. Character/vehicle rigid parts are merged while preserving animated joints. Pixel ratio is capped and software WebGL disables shadows automatically; hardware rendering uses a bounded shadow map. Gameplay uses fixed 60 Hz steps with frame catch-up capped at 250 ms. Imported actor meshes use conservative bounds for frustum culling, and distant ground loot is hidden. Software WebGL uses lower resolution; hardware rendering retains full resolution, environment reflections and shadows.
 
-This remains a stylised arcade game: Synthesised audio and some vehicle classes remain procedural. The hatchback/sedan/SUV/police body shares one imported car asset; there is no full vehicle suspension or per-wheel animation for that mesh. Civilian leg movement is procedural over an imported skinned pose; it is not a full animation/IK system. There is no recorded dialogue, radio soundtrack, multiplayer, gamepad/touch support, crouch/block/dodge system, vehicle suspension, destructible building interiors or advanced traffic navigation. The train and flyover deck are scenery, not additional drivable systems. Seated driver hitboxes approximate characters rather than matching every visible polygon. Dense collisions may require reversing, changing direction or leaving a vehicle; police/traffic AI uses lightweight road routing rather than a full navigation mesh. Browser-local saving depends on storage permissions. Software-rendered cloud checks do not establish performance on every desktop GPU.
+This remains a stylised arcade game: Synthesised audio and some vehicle classes remain procedural. The hatchback/sedan/SUV/police body shares one imported car asset; there is no full vehicle suspension or per-wheel animation for that mesh. The Boss and Remy use uploaded Mixamo action clips; weapon grips do not have full finger IK. There is no recorded dialogue, radio soundtrack, multiplayer, gamepad/touch support, crouch/block/dodge system, vehicle suspension, destructible building interiors or advanced traffic navigation. The train and flyover deck are scenery, not additional drivable systems. Seated driver hitboxes approximate characters rather than matching every visible polygon. Dense collisions may require reversing, changing direction or leaving a vehicle; police/traffic AI uses lightweight road routing rather than a full navigation mesh. Browser-local saving depends on storage permissions. Software-rendered cloud checks do not establish performance on every desktop GPU.
 
 Vite's bundle-size advisory is expected because Three.js and Rapier's embedded WebAssembly are shipped together. No external assets or credentials are required at runtime.
 
@@ -146,7 +146,7 @@ City architecture, street dressing, signs, jokes and dialogue are created by thi
 
 ## Embedded art
 
-The offline HTML is approximately 100 MB because the glTF characters/car, user-selected 2K PBR surface maps, weapon meshes and the 2K HDR environment are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
+The offline HTML is approximately 99 MB because characters, cars, 14 street prop models, PBR surface maps, weapons, action clips and HDR lighting are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
 
 ### Choosing free replacement textures
 
@@ -156,9 +156,9 @@ For better ground, weathered brick, rubble and rusty corrugated metal, choose as
 
 Right-click with a firearm now switches to a close sight view with a narrower field of view and a camera-mounted weapon. The player body is hidden while aiming so it cannot cover the crosshair; releasing right-click returns to third person.
 
-The player now uses the user-supplied Mixamo **The Boss** model with embedded textures and simple authored idle/walk animation. All civilians, including civilian drivers, now use the user-supplied Mixamo **Remy** model with embedded textures and simple authored idle/walk loops; police retain Soldier. See `REQUESTED-ASSETS.md` for the texture and weapon selections still waiting for accessible files.
+The player now uses the user-supplied Mixamo **The Boss** model with embedded textures and the uploaded action animations. All civilians, including civilian drivers, now use the user-supplied Mixamo **Remy** model with embedded textures and the uploaded action animations; police retain Soldier. See `REQUESTED-ASSETS.md` for all applied selections.
 
-The Boss has stronger walking arm swing and real skeleton poses for firearm holding, aiming/reloading and melee punches. Weapon attachment follows his imported hand. These remain simple project-authored poses rather than new motion-capture clips.
+The Boss has stronger walking arm swing and real skeleton poses for firearm holding, aiming/reloading and melee punches. Weapon attachment follows his imported hand. Uploaded action clips supply movement, attacks, reloading and driving.
 
 Roads, pavements, roofs, lampposts, alleyways and building walls use the user-selected 2K colour, OpenGL normal and roughness maps. Lampposts also use a metalness map. The texture changes affect appearance; surface geometry and physics are unchanged.
 
@@ -169,3 +169,7 @@ Knife and Hammer replace the previous melee weapon names and meshes, using Mache
 ### Uploaded action animation
 
 The Boss and Remy use the uploaded Mixamo clips for walking, starts, jogging, backward jogging, strafing, turns, stopping, jumping/landing, punches, melee stabs, reloads, pickups, rifle movement/fire and driving. Civilian weapon reactions play the second Start Walking clip before jogging away. Driving animation is fitted to the cabin using joint bounds and clearance for the mesh. Uploaded motion is retargeted to each skeleton, blended between actions and stored as compressed data; physical movement remains controlled by Rapier. See `REQUESTED-ASSETS.md` for the exact mapping. Closed-vehicle driver sizing is adjusted throughout the driving clip, including NPC drivers.
+
+### Uploaded street props
+
+The 14 uploaded street models dress building fronts, alleys and road shoulders. Repeated props use instanced meshes with the original photographic materials. Utility boxes, barriers and hydrants are solid with no player damage on vehicle impact. Fences and covered cars are solid with normal crash feedback. Flush manholes and loose litter do not create driving collisions. See `ASSET-LICENSES.md` for source links and processing details.

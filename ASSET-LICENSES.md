@@ -19,9 +19,9 @@ CesiumMan is retained as an unused development reference in the source tree. It 
 
 ## User-selected player replacement
 
-**The Boss**: supplied by the user as `The Boss.fbx`, with Mixamo rig naming and embedded diffuse, normal and specular maps. Converted to `src/assets/boss.glb`, preserving the character textures, with project-generated idle/walk loops and game scale/orientation adjustments. Adobe Mixamo's [FAQ](https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html) permits royalty-free character use within games. It replaces the previous Soldier mesh for the player only. The uploaded file did not include walking clips, so these are simple authored loops, not new Mixamo animations.
+**The Boss**: supplied by the user as `The Boss.fbx`, with Mixamo rig naming and embedded diffuse, normal and specular maps. Converted to `src/assets/boss.glb`, preserving the character textures, with game scale/orientation adjustments and the uploaded Mixamo actions described below. Adobe Mixamo's [FAQ](https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html) permits royalty-free character use within games. It replaces the previous Soldier mesh for the player only. The original upload did not contain walking clips; subsequent user animation uploads now provide locomotion and actions.
 
-**Remy**: supplied by the user as `Remy.fbx.zip`, downloaded by them from Adobe Mixamo. Converted to `src/assets/remy.glb` with its embedded diffuse/normal textures and project-generated idle/walk loops. It replaces Michelle and the non-police Soldier residents, including civilian drivers. The Boss remains the player; Soldier remains police. Mixamo's royalty-free game-use terms above apply. Michelle is retained as an unused source reference, no longer bundled or loaded by the game.
+**Remy**: supplied by the user as `Remy.fbx.zip`, downloaded by them from Adobe Mixamo. Converted to `src/assets/remy.glb` with its embedded diffuse/normal textures and subsequently uploaded Mixamo actions. It replaces Michelle and the non-police Soldier residents, including civilian drivers. The Boss remains the player; Soldier remains police. Mixamo's royalty-free game-use terms above apply. Michelle is retained as an unused source reference, no longer bundled or loaded by the game.
 
 ## User-selected 2K surface materials
 
@@ -51,3 +51,26 @@ Weapon meshes and materials are converted from Blender to embedded-texture glTF,
 Uploaded Mixamo clips are retargeted to The Boss and Remy and packed as compressed animation data in `src/assets/motions.bin`. Adobe Mixamo's royalty-free game-use FAQ above applies; the clips are incorporated into this game rather than supplied as a standalone animation product. Adaptations: skeleton proportions, removed horizontal root motion, limited vertical body bob, playback timing and blending to match physics, attacks and reload durations. The latest Punching (1) replaces the earlier Punching file. Both Start Walking uploads have their requested separate action mappings.
 
 The game uses the uploaded walking, starting, jogging, backward jogging, strafing, jumping/landing, stopping, direction-changing, rifle walking/turning/firing, punching, dagger-stab, reloading, pickup and driving clips. Melee attack slots share Double Dagger Stab as requested. Native Soldier idle/walk clips remain for police. Driving skeleton envelopes are fitted to each enclosed vehicle before rendering, keeping character animation outside the vehicle physics calculation.
+
+## User-supplied street props
+
+The following Poly Haven models were supplied by the user as Blender ZIPs. All are CC0 and embedded in the standalone game:
+
+| Model | Source | Placement |
+|---|---|---|
+| Water Manhole Cover | https://polyhaven.com/a/water_manhole_cover | Flush road covers |
+| Security Camera 01 | https://polyhaven.com/a/security_camera_01 | Building fronts |
+| Utility Box 02 | https://polyhaven.com/a/utility_box_02 | Building edges; solid, no driving damage |
+| Exterior Aircon Unit | https://polyhaven.com/a/exterior_aircon_unit | Building walls; rusted variant |
+| Concrete Road Barrier | https://polyhaven.com/a/concrete_road_barrier | Road shoulders; LOD1, solid |
+| Fire Hydrant | https://polyhaven.com/a/fire_hydrant | Pavements; aged variant, solid |
+| Trashbag | https://polyhaven.com/a/trashbag | Alley/building edges |
+| Metal Trash Can | https://polyhaven.com/a/metal_trash_can | Streets and alley edges; rusted variant |
+| Cardboard Box 01 | https://polyhaven.com/a/cardboard_box_01 | Shopfronts |
+| Rollershutter Window 02 | https://polyhaven.com/a/rollershutter_window_02 | Building fronts; graffiti variant |
+| Modular Chainlink Fence | https://polyhaven.com/a/modular_chainlink_fence | Alley edges; double panel and two endposts, solid |
+| Covered Car | https://polyhaven.com/a/covered_car | Street shoulders; solid |
+| Old Tyre | https://polyhaven.com/a/old_tyre | Beside abandoned cars |
+| Rusted Wheel Rim 02 | https://polyhaven.com/a/rusted_wheel_rim_02 | Beside tyres |
+
+Adaptations: selected assembled variants, ground alignment, orientation, placement and rigid collision bounds. The rim's authored shape-key pose is baked into its static mesh. Repeated models are instanced by map cell while preserving their scanned geometry and photographic materials. Small-prop maps are capped at 1K; covered-car maps retain 2K. Embedded model images use WebP through glTF's EXT_texture_webp extension. Character, vehicle and weapon images also use WebP, keeping the single HTML below GitHub's 100 MiB file limit without modifying their geometry or skeletons.

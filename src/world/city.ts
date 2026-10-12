@@ -13,7 +13,9 @@ export const SPAWN = new THREE.Vector3(4.9, .84, 15);
 export const SAFEHOUSE = new THREE.Vector3(8.8, 0, 31);
 const colours = ['#ba7959', '#ddc098', '#7d9a92', '#cc955b', '#aaba97', '#bd7468', '#75909e'];
 const shops = ['NIMBU & CO. • FRESH JUICE', 'CHAI, ACTUALLY', 'SUNDAR STORES', 'SECOND CHANCE MOTORS', 'FIX IT TOMORROW', 'PATEL ELECTRICALS', 'ROOMS • NO QUESTIONS', 'THE DAILY DOSA'];
+export interface BuildingAnchor{x:number;z:number;width:number;depth:number;height:number;yaw:number;front:number;}
 export class City {
+  anchors:BuildingAnchor[]=[];
   root = new THREE.Group();
   constructor(scene: THREE.Scene, private physics: Physics) {
     scene.add(this.root);
@@ -116,6 +118,7 @@ export class City {
   }
   shack(x:number,z:number,w:number,d:number,h:number,id:number){
     const g=new THREE.Group();g.position.set(x,0,z);const angle=Math.sin(id*3.4)*.11;g.rotation.y=angle;this.root.add(g);
+    this.anchors.push({x,z,width:w,depth:d,height:h,yaw:angle,front:-1});
     const wall=box(g,[w,h,d],[0,h/2,0],['#b7a98e','#bca58c','#a5a18a','#a69b83'][id%4]);wall.userData.surface='brick';
     // Patched timber doors, mixed sheet roofs, uneven additions and hand-built structural poles.
     box(g,[1.05,1.9,.08],[-w*.2,.98,-d/2-.06],'#4a392a');
@@ -133,6 +136,7 @@ export class City {
     if(id%2===0){const wire=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x-w/2,h+.3,z),new THREE.Vector3(x-w/2-1,h-.3,z+2),new THREE.Vector3(x-w/2-2,h+.1,z+4)]),new THREE.LineBasicMaterial({color:'#292b27'}));this.root.add(wire);}
   }
   warehouse(x: number, z: number, i: number, physics: Physics) {
+    this.anchors.push({x,z,width:14,depth:27,height:7,yaw:0,front:1});
     const g = new THREE.Group(); g.position.set(x, 0, z); this.root.add(g);
     box(g, [14, 7, 27], [0, 3.5, 0], i % 2 ? '#918a72' : '#ab8164').userData.surface='brick';
     box(g, [14.5, .4, 27.5], [0, 7.2, 0], '#5f7066');
@@ -154,6 +158,7 @@ export class City {
       for (const dx of [-.8, -.4, 0, .4, .8]) box(g, [.045, .65, .045], [bx + dx, y - .3, d / 2 + .75], '#526259');
       box(g, [1.8, .045, .045], [bx, y + .03, d / 2 + .75], '#526259');
     }
+    this.anchors.push({x,z,width:w,depth:d,height:h,yaw:angle,front:1});
     const shopColour = ['#33796f', '#944c3f', '#a17f2e', '#355b68'][i % 4];
     sign(g, shops[i % shops.length], w - .5, .85, [0, 2.95, d / 2 + .13], shopColour, '#fff1cf', 31);
     for (const bx of [-3.45, 0, 3.45]) {

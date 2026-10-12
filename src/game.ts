@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { environment } from './world/assets';
 import { grimeTexture } from './world/grit';
+import { StreetProps } from './world/street-props';
 import { surfaces } from './world/surfaces';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { City, SAFEHOUSE, SPAWN } from './world/city';
@@ -44,6 +45,7 @@ export class Game {
   loot: Loot;
   effects: Effects;
   combat: Combat;
+  streetProps:StreetProps;
   damageFlash = 0;
   ui: UI;
   audio = new AudioSystem();
@@ -74,7 +76,7 @@ export class Game {
     const sun = new THREE.DirectionalLight('#fff0dc', 2.4); sun.position.set(-34, 58, 30); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -75; sun.shadow.camera.right = 75; sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 160; sun.shadow.normalBias = .09; sun.shadow.bias = -.0006; this.scene.add(sun);
-    const city = new City(this.scene, this.physics); this.batchCity(city.root);
+    const city = new City(this.scene, this.physics); this.batchCity(city.root);this.streetProps=new StreetProps(this.scene,this.physics,city.anchors);
     this.player = new Player(this.scene, this.physics); this.fleet = new Fleet(this.scene, this.physics); this.traffic = new Traffic(this.scene, this.physics, this.fleet);
     this.npcs = new NPCSystem(this.scene, this.physics);
     this.police = new Police(this.scene, this.physics, this.fleet, this.npcs, message => this.ui.toast(message));
@@ -225,7 +227,8 @@ export class Game {
     this.fleet.update(dt, this.input, (impact, collider) => {
       const npc=this.npcs.npcs.find(n=>n.active&&n.health>0&&n.collider.handle===collider?.handle);
       if(npc){this.combat.hit(npc,Math.min(60,impact*5),npc.position.clone().add(new THREE.Vector3(0,.5,0)),new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw)));if(npc.health>0)npc.state='flee';}
-      this.audio.tone(70, .25, 'sawtooth', .35); this.damagePlayer(Math.min(18, Math.ceil(Math.max(0, impact - 12) * .65)), this.vehicle.position.clone().add(new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))));
+      this.audio.tone(70, .25, 'sawtooth', .35);
+      if(!collider||!this.physics.safeObstacles.has(collider.handle))this.damagePlayer(Math.min(18, Math.ceil(Math.max(0, impact - 12) * .65)), this.vehicle.position.clone().add(new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))));
       this.ui.toast('THAT’LL BUFF OUT', '“That’s somebody else’s problem now.”');
     });
     this.npcs.targetCollider = this.player.driving ? this.vehicle.collider : this.player.collider;
@@ -289,13 +292,14 @@ export class Game {
     }
     const location=this.running?this.player.position:new THREE.Vector3(2,0,15);
     this.loot.update(location);
+    this.streetProps.update(location);
     this.cityBatches.forEach(mesh=>{const bound=mesh.geometry.boundingSphere!;mesh.visible=mesh.userData.alwaysVisible||bound.center.distanceTo(location)<160+bound.radius;});
     this.cityDetails.forEach(object=>{object.visible=object.getWorldPosition(new THREE.Vector3()).distanceTo(location)<135;});
     this.renderer.render(this.scene, this.camera); this.frame++;
     requestAnimationFrame(this.loop);
   };
   snapshot() {
-    return { crashes:this.vehicle.crashes, lastImpact:this.vehicle.lastImpactCollider?.translation(), cityBatches:this.cityBatches.length, cityTriangles:this.cityBatches.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0), animation:this.player.model.motion.current, animations:{...this.player.model.motion.counts}, driverBounds:this.player.model.root.userData.driverBounds, characterYaw:this.player.model.root.rotation.y, characterArm:(this.player.model.root.getObjectByName('mixamorigRightArm')??this.player.model.root.getObjectByName('mixamorig:RightArm'))?.quaternion.toArray(), lootCount:this.loot.items.length, exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, model:n.model.root.userData.asset, animation:n.model.motion.current, position:n.position.toArray(), screen:n.position.clone().add(new THREE.Vector3(0,.35,0)).project(this.camera).toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
+    return { props:this.streetProps.counts,propObstacles:this.streetProps.obstacles,crashes:this.vehicle.crashes, lastImpact:this.vehicle.lastImpactCollider?.translation(), cityBatches:this.cityBatches.length, cityTriangles:this.cityBatches.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0), animation:this.player.model.motion.current, animations:{...this.player.model.motion.counts}, driverBounds:this.player.model.root.userData.driverBounds, characterYaw:this.player.model.root.rotation.y, characterArm:(this.player.model.root.getObjectByName('mixamorigRightArm')??this.player.model.root.getObjectByName('mixamorig:RightArm'))?.quaternion.toArray(), lootCount:this.loot.items.length, exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, model:n.model.root.userData.asset, animation:n.model.motion.current, position:n.position.toArray(), screen:n.position.clone().add(new THREE.Vector3(0,.35,0)).project(this.camera).toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
       driving: this.player.driving, speed: this.vehicle.speed, yaw: this.vehicle.yaw, cameraYaw: this.follow.yaw, cameraPosition: this.camera.position.toArray(),
       health: this.health, cash: this.cash, bottles: this.bottles, collected: this.pickups.collected, prompt: this.prompt, distanceDriven: this.vehicle.distanceDriven,
       cameraFov: this.camera.fov, sightWeaponVisible: this.combat.sightWeapon?.visible ?? false, characterVisible: this.player.model.root.visible, cameraDistance: this.camera.position.distanceTo(this.follow.target), cameraPitch: this.follow.pitch, damageFlash: this.damageFlash,

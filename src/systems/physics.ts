@@ -3,7 +3,7 @@ import * as THREE from 'three';
 
 export class Physics {
   world: RAPIER.World;
-  ground: RAPIER.Collider;
+  ground: RAPIER.Collider;safeObstacles=new Set<number>();
   constructor() {
     this.world = new RAPIER.World({ x: 0, y: -22, z: 0 });
     this.ground = this.fixedBox(new THREE.Vector3(0, -.5, 0), new THREE.Vector3(216, .5, 216));

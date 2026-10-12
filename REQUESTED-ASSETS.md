@@ -42,3 +42,7 @@ The user confirmed mapping the machete to Knife and war hammer to Hammer. Intern
 | Driving | Driving, fitted to cabin bounds |
 
 The motion bank includes 18 action mappings per imported character. Body motion is blended, with translation controlled by physics and gun/melee timing controlled by gameplay. Police retain their native Soldier animation clips. Vehicle driver fit uses animated joint bounds plus head/hand/foot clearance.
+
+## Street dressing
+
+All 14 cosmetic uploads are applied: manholes, cameras, utility boxes, air conditioning units, concrete barriers, hydrants, trash bags, trash cans, shopfront boxes, shutters, fences, covered cars, tyres and wheel rims. Utility boxes, barriers and hydrants block vehicles without injuring the player. Fences and covered cars block both walking and driving and retain ordinary crash feedback. Covers and small litter are visual, avoiding new invisible pavement impacts. Starter-car clearance is preserved.
