@@ -1,0 +1,231 @@
+[
+  {
+    "id": "music-retro",
+    "file": "music-retro.ogg",
+    "source": "https://github.com/godotengine/godot-demo-projects/blob/b761b4cd5718a7118f2c95eb55f181d0a5f004f1/audio/bpm_sync/the_comeback2.ogg",
+    "license": "MIT",
+    "credit": "Godot Engine contributors",
+    "originalSha256": "909c8e15bfdaa1814f2d62131fac4137938460f6aae76327b4390f3d0bfc62ae",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "music-action",
+    "file": "music-action.ogg",
+    "source": "https://github.com/godotengine/tps-demo/blob/a82f15448e9b015440d3bbdf5e10801b260c4e9f/level/level_music.ogg",
+    "license": "CC-BY-3.0",
+    "credit": "Christian Fernando Perucchi",
+    "originalSha256": "0b94fbd7f9c338fe9ec940ca745f210e85bff6e3e5dd5596397e6fa8e58d957a",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "pistol",
+    "file": "pistol.ogg",
+    "source": "https://github.com/godotengine/tps-demo/blob/a82f15448e9b015440d3bbdf5e10801b260c4e9f/player/audio/shoot.wav",
+    "license": "CC-BY-3.0",
+    "credit": "Juan Linietsky and Fernando Miguel Calabr\u00f3",
+    "originalSha256": "ac9db64cc7193d6bc1eb446e99eaca5c43886dabe06aa77a6fb7baca03928f58",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "shotgun",
+    "file": "shotgun.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/shotgun/primary2.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "280192ea96fdbc3bd64fc99a6c76bbf452c192c67dbb06e09a1c97f87b0a4df0",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "reload-pistol",
+    "file": "reload-pistol.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/pistol/reload.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "878b16a62293d68eadb2a54ba1018a426cbaeb2837ce723012bca71d5dfc5796",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "reload-rifle",
+    "file": "reload-rifle.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/rifle/reload2.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "bd9f734ba988d891c07cb276348020463e95d4ea36e00f0cfaebffdfb1f617f0",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "empty",
+    "file": "empty.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/pistol/notify.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "30101b0dd91f3b80d810b8176efcf583d8a1cfe498d8e09ae1489e32e3a2f39e",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "knife-swing",
+    "file": "knife-swing.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/sword/primary2.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "1e78f39f071eaabc0eabf2b60f801c6dbd80383d6d1076464f04d14e636ae411",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "strike",
+    "file": "strike.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/thwack2.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "16b0f7b1c6b026e28aae1939074a4d8aedb77b8cbeca43a626dd45dd07534cea",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "punch",
+    "file": "punch.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/thwack.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "f2832364be4f73f1f6253d73c2e01c76fe5672ffb8112b529b98ebaa32b17bdd",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "hammer",
+    "file": "hammer.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/thud2.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "40b5c66caa50583e7b17a7485c12efc6db7d6b9bd564938af09f2d83af14ccf3",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "metal-hit",
+    "file": "metal-hit.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/weapons/tink.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team / Q009",
+    "originalSha256": "3f6c0bc7a21ab3f6732ceae7ec9ad4cf6cd1f1abbf23fdfb71a1e87c655568c8",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "engine",
+    "file": "engine.ogg",
+    "source": "https://github.com/KenneyNL/Starter-Kit-Racing/blob/2f2e5f2646dda89cb21d4e8539bab60c6e955dc8/audio/engine.ogg",
+    "license": "CC0-1.0",
+    "credit": "Kenney",
+    "originalSha256": "6d665dfc961e2d522c866bdcf12fc0ac56c885c0c7117e830df84ba8eecd655c",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "engine-bike",
+    "file": "engine-bike.ogg",
+    "source": "https://github.com/KenneyNL/Starter-Kit-Racing/blob/2f2e5f2646dda89cb21d4e8539bab60c6e955dc8/audio/engine-motorcycle.ogg",
+    "license": "CC0-1.0",
+    "credit": "Kenney",
+    "originalSha256": "aed3b357bf885d5390a517ee6da2a55f3a17307d8d094175215fb60669f98ef7",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "crash",
+    "file": "crash.ogg",
+    "source": "https://github.com/KenneyNL/Starter-Kit-Racing/blob/2f2e5f2646dda89cb21d4e8539bab60c6e955dc8/audio/impact.ogg",
+    "license": "CC0-1.0",
+    "credit": "Kenney",
+    "originalSha256": "964c5fcfb91e7710e2af25c2243c8b7160756b223b0984bacc9eb25bfeea057b",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "skid",
+    "file": "skid.ogg",
+    "source": "https://github.com/KenneyNL/Starter-Kit-Racing/blob/2f2e5f2646dda89cb21d4e8539bab60c6e955dc8/audio/skid.ogg",
+    "license": "CC0-1.0",
+    "credit": "Landeplage / Kenney",
+    "originalSha256": "e62a42c0a4af29ed69b37cfc80d088a6808c59f8f725285ebcc3f409267965a0",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "footstep",
+    "file": "footstep.ogg",
+    "source": "https://github.com/godotengine/tps-demo/blob/a82f15448e9b015440d3bbdf5e10801b260c4e9f/player/audio/step.wav",
+    "license": "CC-BY-3.0",
+    "credit": "Juan Linietsky and Fernando Miguel Calabr\u00f3",
+    "originalSha256": "ab0f61b67c9deb12aba003001c7e79928260089965eac7c044b67f36459d1de1",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "land",
+    "file": "land.ogg",
+    "source": "https://github.com/godotengine/tps-demo/blob/a82f15448e9b015440d3bbdf5e10801b260c4e9f/player/audio/land.wav",
+    "license": "CC-BY-3.0",
+    "credit": "Juan Linietsky and Fernando Miguel Calabr\u00f3",
+    "originalSha256": "535e6cc59b768f5c4ad9aa543909ad8709a57bcca7db01a08e7689da2f2b14b9",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "door",
+    "file": "door.ogg",
+    "source": "https://github.com/godotengine/tps-demo/blob/a82f15448e9b015440d3bbdf5e10801b260c4e9f/door/open_close.wav",
+    "license": "CC-BY-3.0",
+    "credit": "Juan Linietsky and Fernando Miguel Calabr\u00f3",
+    "originalSha256": "1f494a76a8abe7cb05c84a0ffb3899c9568c68341d727323416e6f26c7cedf6f",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "coins",
+    "file": "coins.ogg",
+    "source": "https://github.com/flareteam/flare-game/blob/af6eee6d339ac98011864bfe89da837fe7769c28/mods/fantasycore/soundfx/inventory/inventory_coins.ogg",
+    "license": "CC-BY-3.0",
+    "credit": "artisticdude",
+    "originalSha256": "2d787246ba719d70a2580f04cb5d178180235d66147207b5fcd4d2aea318f3dd",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono.",
+    "originalSource": "https://opengameart.org/content/inventory-sound-effects"
+  },
+  {
+    "id": "pickup",
+    "file": "pickup.ogg",
+    "source": "https://github.com/flareteam/flare-game/blob/af6eee6d339ac98011864bfe89da837fe7769c28/mods/fantasycore/soundfx/inventory/inventory_metal.ogg",
+    "license": "CC-BY-3.0",
+    "credit": "artisticdude",
+    "originalSha256": "d823b94dac7d670c7d616c8ce7b317b5ac39b5963f0a8bc97727d5e8454be4a9",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono.",
+    "originalSource": "https://opengameart.org/content/inventory-sound-effects"
+  },
+  {
+    "id": "ammo",
+    "file": "ammo.ogg",
+    "source": "https://github.com/flareteam/flare-game/blob/af6eee6d339ac98011864bfe89da837fe7769c28/mods/fantasycore/soundfx/inventory/inventory_object.ogg",
+    "license": "CC-BY-3.0",
+    "credit": "Michel Baradari",
+    "originalSha256": "b0f21e97642328271f3a68cbf35b6cba6dd9f3f6b16e94aa32881e6c71972ec7",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono.",
+    "originalSource": "https://opengameart.org/content/3-item-sounds"
+  },
+  {
+    "id": "bottle",
+    "file": "bottle.ogg",
+    "source": "https://github.com/flareteam/flare-game/blob/af6eee6d339ac98011864bfe89da837fe7769c28/mods/fantasycore/soundfx/inventory/inventory_potion.ogg",
+    "license": "CC0-1.0",
+    "credit": "Stephan",
+    "originalSha256": "0ce275cee5280392c3880ca4b459f48dfdbb54d8540f6c4fa54b22a399b77727",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono.",
+    "originalSource": "https://github.com/flareteam/flare-game/wiki/Credits"
+  },
+  {
+    "id": "cash-bell",
+    "file": "cash-bell.ogg",
+    "source": "https://github.com/godotengine/godot-demo-projects/blob/b761b4cd5718a7118f2c95eb55f181d0a5f004f1/audio/audio_effects/sfx/Ding.wav",
+    "license": "MIT",
+    "credit": "Godot Engine contributors",
+    "originalSha256": "5e8702315160ad77d9d127d60554c9432b93791306310dd9fa6de45c00cff252",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  },
+  {
+    "id": "ambience",
+    "file": "ambience.ogg",
+    "source": "https://github.com/redeclipse/sounds/blob/f7ec71456335a57fc5fba136d5d9a7e0b2ae009f/ambience/distant_cars.ogg",
+    "license": "CC-BY-SA-4.0",
+    "credit": "Red Eclipse Team",
+    "originalSha256": "a134f1c42131909167bf6e7346fad8e73e891a18531babd25f281ea480428dbd",
+    "changes": "Resampled to 44.1 kHz; Vorbis compression; peak limiting; sound effects mixed to mono."
+  }
+]

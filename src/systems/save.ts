@@ -14,8 +14,8 @@ export class SaveSystem {
   }
   save(data: SaveData) { try { localStorage.setItem(KEY, JSON.stringify(data)); return true; } catch { this.available = false; return false; } }
   settings() {
-    try { const s = JSON.parse(localStorage.getItem(KEY + '-settings') || '{}'); return { volume: typeof s.volume === 'number' ? Math.min(1, Math.max(0, s.volume)) : .35, sensitivity: typeof s.sensitivity === 'number' ? Math.min(2, Math.max(.3, s.sensitivity)) : 1 }; }
-    catch { return { volume: .35, sensitivity: 1 }; }
+    try { const s = JSON.parse(localStorage.getItem(KEY + '-settings') || '{}'); return { volume: typeof s.volume === 'number' ? Math.min(1, Math.max(0, s.volume)) : .35, music: typeof s.music === 'number' ? Math.min(1, Math.max(0, s.music)) : .65, sensitivity: typeof s.sensitivity === 'number' ? Math.min(2, Math.max(.3, s.sensitivity)) : 1 }; }
+    catch { return { volume: .35, music:.65, sensitivity: 1 }; }
   }
-  setSettings(settings: { volume: number; sensitivity: number }) { try { localStorage.setItem(KEY + '-settings', JSON.stringify(settings)); } catch { this.available = false; } }
+  setSettings(settings: { volume: number; music:number; sensitivity: number }) { try { localStorage.setItem(KEY + '-settings', JSON.stringify(settings)); } catch { this.available = false; } }
 }

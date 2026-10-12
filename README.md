@@ -1,6 +1,6 @@
 # Grand Theft Train: Poop City
 
-A third-person crime sandbox with imported skinned 3D characters, a detailed car mesh, photographed materials and HDR environment lighting set in fictional Sundarpur. This expansion continues the existing Vite, TypeScript, Three.js and Rapier game, preserving Rab McTavish, his ginger hair and green-and-white Celtic-style hoops, Buckfast, driving, menus and saving.
+A retrowave crime sandbox with imported 3D characters, photographed materials, dusk/neon lighting, free electronic music and recorded game audio, set in fictional Sundarpur. This expansion continues the existing Vite, TypeScript, Three.js and Rapier game, preserving Rab McTavish, his ginger hair and green-and-white Celtic-style hoops, Buckfast, driving, menus and saving.
 
 ## Play the single-file edition
 
@@ -134,7 +134,7 @@ Cloud tests use `/usr/bin/chromium`; set `CHROMIUM_PATH` for another installatio
 
 Static geometry is batched by map cell with shared vertex-colour materials and culled by distance. Detail signs, NPCs and traffic have distance limits. Character/vehicle rigid parts are merged while preserving animated joints. Pixel ratio is capped and software WebGL disables shadows automatically; hardware rendering uses a bounded shadow map. Gameplay uses fixed 60 Hz steps with frame catch-up capped at 250 ms. Imported actor meshes use conservative bounds for frustum culling, and distant ground loot is hidden. Software WebGL uses lower resolution; hardware rendering retains full resolution, environment reflections and shadows.
 
-This remains a stylised arcade game: Synthesised audio and some vehicle classes remain procedural. The hatchback/sedan/SUV/police body shares one imported car asset; there is no full vehicle suspension or per-wheel animation for that mesh. The Boss and Remy use uploaded Mixamo action clips; weapon grips do not have full finger IK. There is no recorded dialogue, radio soundtrack, multiplayer, gamepad/touch support, crouch/block/dodge system, vehicle suspension, destructible building interiors or advanced traffic navigation. The train and flyover deck are scenery, not additional drivable systems. Seated driver hitboxes approximate characters rather than matching every visible polygon. Dense collisions may require reversing, changing direction or leaving a vehicle; police/traffic AI uses lightweight road routing rather than a full navigation mesh. Browser-local saving depends on storage permissions. Software-rendered cloud checks do not establish performance on every desktop GPU.
+This remains a stylised arcade game: Some vehicle classes remain procedural. The hatchback/sedan/SUV/police body shares one imported car asset; there is no full vehicle suspension or per-wheel animation for that mesh. The Boss and Remy use uploaded Mixamo action clips; weapon grips do not have full finger IK. There is no recorded dialogue, radio soundtrack, multiplayer, gamepad/touch support, crouch/block/dodge system, vehicle suspension, destructible building interiors or advanced traffic navigation. The train and flyover deck are scenery, not additional drivable systems. Seated driver hitboxes approximate characters rather than matching every visible polygon. Dense collisions may require reversing, changing direction or leaving a vehicle; police/traffic AI uses lightweight road routing rather than a full navigation mesh. Browser-local saving depends on storage permissions. Software-rendered cloud checks do not establish performance on every desktop GPU.
 
 Vite's bundle-size advisory is expected because Three.js and Rapier's embedded WebAssembly are shipped together. No external assets or credentials are required at runtime.
 
@@ -142,11 +142,11 @@ Vite's bundle-size advisory is expected because Three.js and Rapier's embedded W
 
 `src/game.ts` coordinates the loop. `src/systems/` contains input, camera, player, fleet/vehicles, traffic, NPCs, police, missions, combat, inventory, pickups/loot, effects, audio, saving and UI. `src/world/` contains modular city generation, road routes, original character/vehicle/weapon models and rigid-part batching. `scripts/build-standalone.mjs` embeds the built bundle and styles into one HTML file.
 
-City architecture, street dressing, signs, jokes and dialogue are created by this project. Imported character, car and surface assets are credited in ASSET-LICENSES.md. Sound is synthesised. Three.js and Vite are MIT-licensed; Rapier is Apache-2.0-licensed. Dependency licence notices remain with their packages and bundle.
+City architecture, street dressing, signs, jokes and dialogue are created by this project. Imported character, car and surface assets are credited in ASSET-LICENSES.md. Recorded game audio is attributed in AUDIO-SOURCES.md. Three.js and Vite are MIT-licensed; Rapier is Apache-2.0-licensed. Dependency licence notices remain with their packages and bundle.
 
 ## Embedded art
 
-The offline HTML is approximately 99 MB because characters, cars, 14 street prop models, PBR surface maps, weapons, action clips and HDR lighting are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
+The offline HTML is approximately 104 MB because characters, cars, 14 street prop models, PBR surface maps, weapons, action clips and HDR lighting are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
 
 ### Choosing free replacement textures
 
@@ -173,3 +173,11 @@ The Boss and Remy use the uploaded Mixamo clips for walking, starts, jogging, ba
 ### Uploaded street props
 
 The 14 uploaded street models dress building fronts, alleys and road shoulders. Repeated props use instanced meshes with the original photographic materials. Utility boxes, barriers and hydrants are solid with no player damage on vehicle impact. Fences and covered cars are solid with normal crash feedback. Flush manholes and loose litter do not create driving collisions. See `ASSET-LICENSES.md` for source links and processing details.
+
+## Retrowave edition and recorded audio
+
+Sundarpur now has a purple dusk sky, striped sunset, cyan/pink shopfront neon, local neon lighting on hardware GPUs, and a CRT/neon interface. Existing user-selected PBR models, materials, buildings and collision rules are retained. Decorative neon does not add obstacles.
+
+Two free licensed electronic tracks respond to movement, cruising, combat and police heat through filtering, gain changes and crossfades. A 25-file audio bank supplies gunshots, magazine/rifle reloads, blade swings and hits, punches, bullet impacts, car/motorcycle engines, tyre skids, crashes, doors, pickups, footsteps, landings, street ambience and a money reward cha-ching. Engine pitch and level follow speed, throttle and approximate automatic gears. Music dips beneath important effects.
+
+Settings contains separate **Master Volume** and **Synthwave Soundtrack** sliders. A soundtrack value of zero preserves effect playback. Browser autoplay rules mean audio starts from New Game, Continue or Resume. Pausing fades music and stops effect voices. Everything is embedded in the one HTML and works offline. See [AUDIO-SOURCES.md](AUDIO-SOURCES.md) for source links and licensing.

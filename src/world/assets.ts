@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { loadSurfaceMaps } from './surfaces';
+import { loadAudioAssets } from '../systems/audio-assets';
 import { loadPropAssets } from './prop-assets';
 import { CharacterMotion,loadMotions,type MotionOptions } from './motion';
 import { loadWeaponAssets } from './weapon-assets';
@@ -15,7 +16,7 @@ let human:GLTF,car:GLTF,civilian:GLTF,boss:GLTF;
 export let environment:THREE.DataTexture;
 export async function loadAssets(){
  const loader=new GLTFLoader(),textures=new THREE.TextureLoader();
- [human,car,civilian,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl),loadSurfaceMaps(textures),loadWeaponAssets(loader),loadMotions(),loadPropAssets(loader)]);
+ [human,car,civilian,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl),loadSurfaceMaps(textures),loadWeaponAssets(loader),loadMotions(),loadPropAssets(loader),loadAudioAssets()]);
  environment.mapping=THREE.EquirectangularReflectionMapping;
 }
 
