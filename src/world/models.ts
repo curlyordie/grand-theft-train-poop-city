@@ -1,22 +1,32 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const materials = new Map<string, THREE.MeshStandardMaterial>();
-const geometries = new Map<string, THREE.BoxGeometry>();
+const geometries = new Map<string, THREE.BufferGeometry>();
 export function material(colour: string | number, roughness = .85) {
   const key = `${colour}:${roughness}`;
-  if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color: colour, roughness, flatShading: true }));
+  if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color: colour, roughness, flatShading: false }));
   return materials.get(key)!;
 }
 export function box(parent: THREE.Object3D, size: number[], position: number[], colour: string | number) {
   const key = size.join(',');
-  if (!geometries.has(key)) geometries.set(key, new THREE.BoxGeometry(...size as [number, number, number]));
+  if (!geometries.has(key)) geometries.set(key, (Math.min(...size)>.18 && Math.max(...size)<5 ? new RoundedBoxGeometry(...size as [number,number,number],1,Math.min(...size)*.2) : new THREE.BoxGeometry(...size as [number, number, number])));
   const mesh = new THREE.Mesh(geometries.get(key), material(colour));
   mesh.position.set(...position as [number, number, number]);
   mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
 }
-export function cylinder(parent: THREE.Object3D, top: number, bottom: number, height: number, pos: number[], colour: string | number, sides = 8) {
+export function cylinder(parent: THREE.Object3D, top: number, bottom: number, height: number, pos: number[], colour: string | number, sides = 16) {
   const mesh = new THREE.Mesh(new THREE.CylinderGeometry(top, bottom, height, sides), material(colour));
   mesh.position.set(...pos as [number, number, number]); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+export function ellipsoid(parent:THREE.Object3D,size:number[],position:number[],colour:string|number){
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),material(colour));
+  mesh.scale.set(size[0]/2,size[1]/2,size[2]/2);mesh.position.set(...position as [number,number,number]);mesh.castShadow=true;parent.add(mesh);return mesh;
+}
+export function limb(parent:THREE.Object3D,size:number[],position:number[],colour:string|number){
+  const radius=Math.min(size[0],size[2])/2;
+  const mesh=new THREE.Mesh(new THREE.CapsuleGeometry(radius,Math.max(.01,size[1]-radius*2),4,12),material(colour));
+  mesh.position.set(...position as [number,number,number]);mesh.castShadow=true;parent.add(mesh);return mesh;
 }
 export function sign(parent: THREE.Object3D, text: string, width: number, height: number, pos: number[], bg: string, fg = '#fff2d4', size = 40) {
   const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128;
@@ -35,8 +45,8 @@ export function rabModel() {
   for (let i = 0; i < 6; i++) box(torso, [.54 - i * .008, .09, .3], [0, i * .09, 0], i % 2 ? '#f2f0da' : '#16754d');
   box(torso, [.17, .035, .01], [-.13, .385, -.157], '#dca85b'); // original shirt detail; no official crest
   cylinder(root, .1, .1, .11, [0, 1.49, 0], '#dbaa7f');
-  box(root, [.34, .36, .31], [0, 1.71, 0], '#daa881');
-  box(root, [.355, .1, .32], [0, 1.93, .015], '#9e4f23');
+  ellipsoid(root, [.35, .4, .33], [0, 1.71, 0], '#daa881');
+  ellipsoid(root, [.36, .19, .34], [0, 1.89, .015], '#9e4f23');
   box(root, [.07, .23, .31], [-.16, 1.82, .035], '#ad5a26');
   box(root, [.32, .25, .07], [0, 1.77, .16], '#a85425');
   box(root, [.29, .065, .045], [0, 1.57, -.154], '#ad693e');
@@ -50,9 +60,9 @@ export function rabModel() {
     const arm = new THREE.Group(); arm.position.set(s * .34, 1.4, 0); root.add(arm);
     box(arm, [.17, .18, .24], [0, -.08, 0], '#16754d');
     box(arm, [.17, .08, .24], [0, -.17, 0], '#f2f0da');
-    box(arm, [.13, .32, .16], [0, -.36, 0], '#d5a27c'); arms.push(arm);
+    limb(arm, [.14, .35, .17], [0, -.36, 0], '#d5a27c'); arms.push(arm);
     const leg = new THREE.Group(); leg.position.set(s * .13, .8, 0); root.add(leg);
-    box(leg, [.19, .61, .22], [0, -.32, 0], '#2a3031');
+    limb(leg, [.2, .63, .23], [0, -.32, 0], '#2a3031');
     box(leg, [.045, .2, .24], [s * .09, -.2, 0], '#3b4140');
     box(leg, [.21, .13, .36], [0, -.69, -.06], '#bab6a5');
     box(leg, [.22, .035, .37], [0, -.75, -.06], '#5d6260'); legs.push(leg);
@@ -63,9 +73,12 @@ export function rabModel() {
 export function carModel(colour = '#e87637') {
   const root = new THREE.Group();
   box(root, [1.72, .48, 3.3], [0, .7, 0], colour);
-  box(root, [1.5, .58, 1.65], [0, 1.18, .16], colour);
-  box(root, [1.39, .4, .04], [0, 1.21, -.685], '#294952');
-  box(root, [1.39, .4, .04], [0, 1.21, 1], '#294952');
+  const cabin=box(root, [1.5, .58, 1.65], [0, 1.18, .16], colour);
+  cabin.geometry=cabin.geometry.clone();const vertices=cabin.geometry.attributes.position;
+  for(let i=0;i<vertices.count;i++){const y=vertices.getY(i);if(y>0){vertices.setX(i,vertices.getX(i)*.87);vertices.setZ(i,vertices.getZ(i)*.78);}}
+  cabin.geometry.computeVertexNormals();
+  box(root, [1.39, .4, .04], [0, 1.21, -.685], '#294952').rotation.x=.24;
+  box(root, [1.39, .4, .04], [0, 1.21, 1], '#294952').rotation.x=-.24;
   for (const x of [-.77, .77]) {
     box(root, [.02, .38, .64], [x, 1.21, -.26], '#304f56');
     box(root, [.02, .38, .59], [x, 1.21, .49], '#304f56');
@@ -75,7 +88,7 @@ export function carModel(colour = '#e87637') {
   }
   const wheels: THREE.Mesh[] = [];
   for (const x of [-.87, .87]) for (const z of [-1.04, 1.08]) {
-    const wheel = cylinder(root, .33, .33, .2, [x, .37, z], '#252c2c', 12); wheel.rotation.z = Math.PI / 2; wheels.push(wheel);
+    const wheel = cylinder(root, .33, .33, .2, [x, .37, z], '#252c2c', 24); wheel.rotation.z = Math.PI / 2; wheels.push(wheel);
     const hub = cylinder(root, .17, .17, .215, [x, .37, z], '#aab0a5', 8); hub.rotation.z = Math.PI / 2;
   }
   for (const x of [-.59, .59]) {

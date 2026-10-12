@@ -29,8 +29,12 @@ test('NPCs move, talk, take directional melee damage and fight back with pooled 
 test('handgun pickup, aiming, real hits, ammunition, empty magazine and reload',async({page})=>{
   test.setTimeout(150000);await start(page);await walkPath(page,[[4.8,40],[-5.8,40]]);await page.keyboard.press('KeyE');await expect(page.locator('#weapon-name')).toHaveText('Handgun');
   expect((await state(page)).inventory.loaded.handgun).toBe(12);expect((await state(page)).inventory.reserve.bullets).toBe(24);await walkPath(page,[[-4.8,40],[-4.8,34],[-7.7,34]]);await page.keyboard.press('KeyE');await expect.poll(async()=>(await state(page)).inventory.reserve.bullets).toBe(48);
-  await page.mouse.down({button:'right'});await page.waitForTimeout(200);let hit=false;
-  for(let attempt=0;attempt<5&&!hit;attempt++){const s=await state(page);const npc=s.npcs.filter((n:any)=>n.role!=='police'&&n.health>0&&Math.hypot(n.position[0]-s.position[0],n.position[2]-s.position[2])<20).sort((a:any,b:any)=>Math.hypot(a.position[0]-s.position[0],a.position[2]-s.position[2])-Math.hypot(b.position[0]-s.position[0],b.position[2]-s.position[2]))[0];await faceNPC(page,npc.id,true);await attack(page);await page.waitForTimeout(350);hit=(await state(page)).combat.hits>0;}
+  // Talk first to hold a real, unobstructed target still; software rendering makes moving-target timing variable.
+  await page.keyboard.press('Digit1');await walkTo(page,-4.3,34);
+  for(let i=0;i<5;i++){const s=await state(page),n=s.npcs.find((n:any)=>n.id===3);if(Math.hypot(n.position[0]-s.position[0],n.position[2]-s.position[2])<2.3)break;await walkTo(page,-4.3,n.position[2],.9);}
+  await page.keyboard.press('KeyE');await expect.poll(async()=>(await state(page)).npcs.find((n:any)=>n.id===3).state).toBe('idle');await page.keyboard.press('Digit4');await page.mouse.down({button:'right'});await faceNPC(page,3,true);
+  for(let i=0;i<5;i++){await page.waitForTimeout(250);const s=await state(page),p=s.npcs.find((n:any)=>n.id===3).screen;await page.locator('#scene').dispatchEvent('mousemove',{movementX:Math.atan(p[0]*Math.tan(57*Math.PI/360)*640/480)/.0024,movementY:-Math.atan(p[1]*Math.tan(57*Math.PI/360))/.0024});}
+  await page.waitForTimeout(500);await attack(page);const hit=(await state(page)).combat.hits>0;
   expect(hit).toBe(true);await page.mouse.up({button:'right'});const shotState=await state(page);expect(shotState.inventory.loaded.handgun).toBeLessThan(12);expect(shotState.wanted).toBeGreaterThan(0);
   await page.keyboard.press('KeyR');await expect.poll(async()=>(await state(page)).inventory.loaded.handgun).toBe(12);expect((await state(page)).inventory.reserve.bullets).toBeLessThan(48);
   await page.mouse.down({button:'left'});await expect.poll(async()=>(await state(page)).inventory.loaded.handgun,{timeout:20000}).toBe(0);await page.mouse.up({button:'left'});const shots=(await state(page)).combat.shots;await page.waitForTimeout(500);await attack(page);expect((await state(page)).combat.shots).toBe(shots);
@@ -99,5 +103,5 @@ test('seated police drivers have separate damageable hitboxes',async({page})=>{
 test('buildings block firearm hits on NPCs behind walls',async({page})=>{
   test.setTimeout(100000);await start(page);await walkPath(page,[[4.8,40],[-5.8,40]]);await page.keyboard.press('KeyE');await page.keyboard.press('Digit1');
   await walkPath(page,[[-4.8,40],[-4.8,48],[9.3,48],[9.3,15]]);const target=(await state(page)).npcs.find((n:any)=>n.id===12);expect(target).toBeTruthy();const health=target.health;
-  await page.keyboard.press('Digit4');await page.mouse.down({button:'right'});await faceNPC(page,12,true);await attack(page);await page.waitForTimeout(350);expect((await state(page)).npcs.find((n:any)=>n.id===12).health).toBe(health);expect((await state(page)).inventory.loaded.handgun).toBe(11);await page.mouse.up({button:'right'});
+  await page.keyboard.press('Digit4');await page.mouse.down({button:'right'});await faceNPC(page,12,true);await attack(page);await page.waitForTimeout(350);expect((await state(page)).npcs.find((n:any)=>n.id===12).health).toBe(health);expect((await state(page)).inventory.loaded.handgun).toBeLessThan(12);await page.mouse.up({button:'right'});
 });

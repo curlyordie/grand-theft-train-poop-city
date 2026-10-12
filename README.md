@@ -1,10 +1,10 @@
 # Grand Theft Train: Poop City
 
-An original low-poly third-person crime sandbox set in fictional Sundarpur. This expansion continues the existing Vite, TypeScript, Three.js and Rapier game, preserving Rab McTavish, his ginger hair and green-and-white Celtic-style hoops, Buckfast, driving, menus and saving.
+An original procedural third-person crime sandbox set in fictional Sundarpur. This expansion continues the existing Vite, TypeScript, Three.js and Rapier game, preserving Rab McTavish, his ginger hair and green-and-white Celtic-style hoops, Buckfast, driving, menus and saving.
 
 ## Play the single-file edition
 
-Open `dist/Grand-Theft-Train-Poop-City.html` in desktop Chrome. The HTML embeds all code, styles and Rapier WebAssembly. No server, installation, external assets or Internet connection is needed to play. File-origin storage and pointer lock can be restricted by enterprise browser policies; keeping the file at the same location helps preserve local saves.
+Download the repository-root `Grand-Theft-Train-Poop-City.html` using GitHub’s **Download raw file** button, or open `dist/Grand-Theft-Train-Poop-City.html` after building in desktop Chrome. The HTML embeds all code, styles and Rapier WebAssembly. No server, installation, external assets or Internet connection is needed to play. File-origin storage and pointer lock can be restricted by enterprise browser policies; keeping the file at the same location helps preserve local saves.
 
 Regenerate it from source:
 
@@ -52,6 +52,12 @@ Cloud installations use `npm ci --cache /workspace/.npm-cache --no-audit --no-fu
 | Escape | Release mouse capture and pause |
 
 The first click on an uncaptured viewport captures the mouse without firing. Left-click attacks after capture. Stop below 11 km/h before exiting. Exit searches both sides and the ends of a vehicle for a clear capsule position. Movement/attack keys are cleared at menu transitions.
+
+## City repair and visual update
+
+City batches normalize indexed/non-indexed geometry and retain originals until all merges succeed, preventing invisible building walls. Buildings remain in their existing positions with their original solid collision. Models now use rounded bodywork, shaped heads, capsule limbs, higher-resolution wheels and foliage. World-scale procedural weathering, rubbish bags, scattered litter/rubble, drains, brown runoff puddles and small pavement messes give streets a dirtier appearance. Dressing stays on pavement and small debris has no collision.
+
+There are now 28 parked playable vehicles plus five traffic vehicles, and 54 weapon/ammunition pickups. Existing pickup IDs remain stable for saved games. Vehicle models interpolate physics frames; traffic brakes without repeatedly reversing into obstacles. Crash damage begins above 12 m/s and is capped at 18 health per impact with a 1.5-second cooldown. Aim/held fire continuously rotates Rab to the camera direction. R gives clear reload/full-magazine/no-reserve feedback, and selecting the same weapon preserves an ongoing reload.
 
 ## Expanded world and population
 

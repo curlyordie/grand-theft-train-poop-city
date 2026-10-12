@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dressStreet } from './grit';
 import { box, cylinder, sign, material } from './models';
 import { Physics } from '../systems/physics';
 
@@ -106,6 +107,7 @@ export class City {
       physics.fixedBox(new THREE.Vector3(0, .9, side * 215), new THREE.Vector3(216, .9, .35));
       physics.fixedBox(new THREE.Vector3(side * 215, .9, 0), new THREE.Vector3(.35, .9, 216));
     }
+    dressStreet(this.root);
     // Original mountains frame the city skyline.
     for (let i = 0; i < 22; i++) {
       const mountain = new THREE.Mesh(new THREE.ConeGeometry(24 + i % 4 * 7, 18 + i % 3 * 13, 4), material('#a59f86'));
@@ -164,7 +166,7 @@ export class City {
   tree(x: number, z: number, scale = 1) {
     cylinder(this.root, .14, .24, 3 * scale, [x, 1.5 * scale, z], '#6e6650');
     for (let i = 0; i < 3; i++) {
-      const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry((1.5 - i * .18) * scale, 0), material(i % 2 ? '#7a9062' : '#627b54'));
+      const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry((1.5 - i * .18) * scale, 2), material(i % 2 ? '#7a9062' : '#627b54'));
       leaf.position.set(x + (i - 1) * .6, (3.4 + i * .5) * scale, z); leaf.castShadow = true; this.root.add(leaf);
     }
     box(this.root, [2.6 * scale, .35, 2.6 * scale], [x, .17, z], '#bcab88');

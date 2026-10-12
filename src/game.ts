@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { grimeTexture } from './world/grit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { City, SAFEHOUSE, SPAWN } from './world/city';
 import { cylinder, sign } from './world/models';
@@ -61,12 +62,12 @@ export class Game {
     const gl = this.renderer.getContext(); const info = gl.getExtension('WEBGL_debug_renderer_info');
     const software = info && /swiftshader|llvmpipe|software/i.test(String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)));
     this.renderer.shadowMap.enabled = !software; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.25;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = .95;
     const canvas = this.renderer.domElement; canvas.id = 'scene'; canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Grand Theft Train: Poop City — 3D game');
     document.querySelector('#app')!.replaceChildren(canvas);
-    this.scene.background = new THREE.Color('#d2c5a1'); this.scene.fog = new THREE.Fog('#d2c5a1', 65, 220);
-    this.scene.add(new THREE.HemisphereLight('#ffe9bd', '#6d8171', 2.1));
-    const sun = new THREE.DirectionalLight('#ffe2ae', 3.1); sun.position.set(-34, 58, 30); sun.castShadow = true;
+    this.scene.background = new THREE.Color('#aaa895'); this.scene.fog = new THREE.Fog('#aaa895', 65, 220);
+    this.scene.add(new THREE.HemisphereLight('#dfdfd1', '#555348', 1.4));
+    const sun = new THREE.DirectionalLight('#e5dbbd', 2.3); sun.position.set(-34, 58, 30); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -75; sun.shadow.camera.right = 75; sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 160; sun.shadow.normalBias = .09; sun.shadow.bias = -.0006; this.scene.add(sun);
     const city = new City(this.scene, this.physics); this.batchCity(city.root);
@@ -109,21 +110,31 @@ export class Game {
     root.traverse(object => {
       if (object instanceof THREE.Mesh && object.material instanceof THREE.MeshBasicMaterial) this.cityDetails.push(object);
       if (!(object instanceof THREE.Mesh) || !(object.material instanceof THREE.MeshStandardMaterial)) return;
-      const geometry = object.geometry.clone().applyMatrix4(object.matrixWorld);
+      const geometry = (object.geometry.index ? object.geometry.toNonIndexed() : object.geometry.clone()).applyMatrix4(object.matrixWorld);
+      // World-scale UVs avoid stretching a tiny grime texture across a 428m road.
+      const positions=geometry.attributes.position,normals=geometry.attributes.normal,uv=geometry.attributes.uv;
+      if(uv)for(let i=0;i<positions.count;i++){
+        if(Math.abs(normals.getY(i))>.7)uv.setXY(i,positions.getX(i)*.35,positions.getZ(i)*.35);
+        else uv.setXY(i,(Math.abs(normals.getX(i))>.7?positions.getZ(i):positions.getX(i))*.35,positions.getY(i)*.35);
+      }
       geometry.computeBoundingBox(); const size = geometry.boundingBox!.getSize(new THREE.Vector3()), centre = geometry.boundingBox!.getCenter(new THREE.Vector3());
-      const key = Math.max(size.x, size.z) > 100 ? 'infrastructure' : `${Math.floor(centre.x / 48)},${Math.floor(centre.z / 48)}`;
+      const cell = Math.max(size.x, size.z) > 100 ? 'infrastructure' : `${Math.floor(centre.x / 48)},${Math.floor(centre.z / 48)}`;
+      const key = `${cell}|${object.material.roughness<.4?'wet':'dry'}`;
       const count = geometry.attributes.position.count, colour = object.material.color, colours = new Float32Array(count * 3);
       for (let i=0;i<count;i++) { colours[i*3]=colour.r; colours[i*3+1]=colour.g; colours[i*3+2]=colour.b; }
       geometry.setAttribute('color', new THREE.BufferAttribute(colours,3));
       if (!buckets.has(key)) buckets.set(key, []); buckets.get(key)!.push(geometry); originals.push(object);
     });
-    originals.forEach(m => m.removeFromParent());
-    const material = new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.85});
+
+    const material = new THREE.MeshStandardMaterial({vertexColors:true,flatShading:false,roughness:.95,map:grimeTexture()});
+    const wetMaterial=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.24,metalness:.18});
     buckets.forEach((geometries,key) => {
       const geometry = mergeGeometries(geometries,false);
-      if (geometry) { geometry.computeBoundingSphere(); const mesh=new THREE.Mesh(geometry,material); mesh.castShadow=mesh.receiveShadow=true; mesh.userData.alwaysVisible=key==='infrastructure'; root.add(mesh); this.cityBatches.push(mesh); }
+      if (!geometry) throw new Error(`City geometry merge failed: ${key}`);
+      if (geometry) { geometry.computeBoundingSphere(); const mesh=new THREE.Mesh(geometry,key.endsWith('wet')?wetMaterial:material); mesh.castShadow=mesh.receiveShadow=true; mesh.userData.alwaysVisible=key.startsWith('infrastructure|'); root.add(mesh); this.cityBatches.push(mesh); }
       geometries.forEach(g=>g.dispose());
     });
+    originals.forEach(m => m.removeFromParent());
   }
   capture() { this.renderer.domElement.focus(); this.input.capture(this.renderer.domElement); }
   save() {
@@ -202,7 +213,7 @@ export class Game {
         const npc=this.npcs.npcs.find(n=>n.active&&n.health>0&&n.collider.handle===collider?.handle);
         if (npc) { this.combat.hit(npc,Math.min(60,impact*5),npc.position.clone().add(new THREE.Vector3(0,.5,0)),new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))); if(npc.health>0)npc.state='flee'; }
       }
-      this.audio.tone(70, .25, 'sawtooth', .35); this.damagePlayer(Math.ceil(Math.max(0, impact - 5) * 1.8), this.vehicle.position.clone().add(new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))));
+      this.audio.tone(70, .25, 'sawtooth', .35); this.damagePlayer(Math.min(18, Math.ceil(Math.max(0, impact - 12) * .65)), this.vehicle.position.clone().add(new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))));
       this.ui.toast('THAT’LL BUFF OUT', '“That’s somebody else’s problem now.”');
     });
     this.npcs.targetCollider = this.player.driving ? this.vehicle.collider : this.player.collider;
@@ -237,9 +248,10 @@ export class Game {
     if (this.running) {
       this.accumulator += dt;
       while (this.accumulator >= 1 / 60) { this.fixedUpdate(1 / 60); this.accumulator -= 1 / 60; }
-      const driving = this.player.driving, position = driving ? this.vehicle.position : this.player.position;
+      this.fleet.vehicles.forEach(v=>v.render(this.accumulator/(1/60)));
+      const driving = this.player.driving, position = driving ? this.vehicle.model.root.position.clone().add(new THREE.Vector3(0,this.vehicle.definition.halfHeight+.03,0)) : this.player.position;
       const drivingHeight = this.vehicle.definition.kind === 'van' ? 2 : ['suv','rickshaw','motorcycle'].includes(this.vehicle.definition.kind) ? 1.6 : 1.15;
-      this.follow.update(dt, this.input, position, driving, driving ? this.vehicle.body : this.player.body, this.vehicle.yaw, !driving && this.input.aiming && this.inventory.weapon.type === 'firearm', drivingHeight);
+      this.follow.update(dt, this.input, position, driving, driving ? this.vehicle.body : this.player.body, this.vehicle.model.root.rotation.y, !driving && this.input.aiming && this.inventory.weapon.type === 'firearm', drivingHeight);
       // Hide the character when wall avoidance brings the camera inside his silhouette.
       this.player.model.root.visible = this.camera.position.distanceTo(this.follow.target) > 1.2;
       if (this.combat.held) this.combat.held.visible=!driving;
@@ -248,7 +260,7 @@ export class Game {
         this.player.model.root.scale.setScalar(open?.9:.65);
         const seat=new THREE.Vector3(open?0:.32,this.vehicle.definition.kind==='motorcycle'?.3:.18,.1);
         this.vehicle.model.root.updateMatrixWorld(true);this.vehicle.model.root.localToWorld(seat);
-        this.player.model.root.position.copy(seat);this.player.model.root.rotation.y=this.vehicle.yaw;
+        this.player.model.root.position.copy(seat);this.player.model.root.rotation.y=this.vehicle.model.root.rotation.y;
         this.player.model.root.rotation.z=this.vehicle.model.root.rotation.z;
         this.player.model.legs.forEach(leg=>leg.rotation.x=.7);this.player.model.arms.forEach(arm=>arm.rotation.x=.9);
       } else {this.player.model.root.scale.setScalar(1);this.player.model.root.rotation.z=0;}
@@ -264,7 +276,7 @@ export class Game {
     requestAnimationFrame(this.loop);
   };
   snapshot() {
-    return { exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, position:n.position.toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
+    return { cityBatches:this.cityBatches.length, cityTriangles:this.cityBatches.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0), characterYaw:this.player.model.root.rotation.y, lootCount:this.loot.items.length, exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, position:n.position.toArray(), screen:n.position.clone().add(new THREE.Vector3(0,.35,0)).project(this.camera).toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
       driving: this.player.driving, speed: this.vehicle.speed, yaw: this.vehicle.yaw, cameraYaw: this.follow.yaw, cameraPosition: this.camera.position.toArray(),
       health: this.health, cash: this.cash, bottles: this.bottles, collected: this.pickups.collected, prompt: this.prompt, distanceDriven: this.vehicle.distanceDriven,
       characterVisible: this.player.model.root.visible, cameraDistance: this.camera.position.distanceTo(this.follow.target), cameraPitch: this.follow.pitch, damageFlash: this.damageFlash,

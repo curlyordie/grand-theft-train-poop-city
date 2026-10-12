@@ -103,7 +103,7 @@ export class NPCSystem {
   nearest(position: THREE.Vector3) { return this.npcs.filter(n => n.active && n.health > 0 && n.position.distanceTo(position) < 2.4).sort((a,b)=>a.position.distanceToSquared(position)-b.position.distanceToSquared(position))[0]; }
   interact(npc: NPC, armed: boolean) {
     if (armed && npc.role !== 'police') { npc.state = 'flee'; npc.timer = 7; return '“Put that away. My insurance is theoretical.”'; }
-    npc.state = 'idle'; npc.timer = 2;
+    npc.state = 'idle'; npc.timer = 6;
     return ['“The roadworks are temporary. Since 2009.”', '“Rooms upstairs. Regrets are complimentary.”', '“Nice shirt. Try not to get it confiscated.”', '“Traffic remains, regrettably, traffic.”'][npc.id % 4];
   }
   alert(position: THREE.Vector3) { this.npcs.forEach(n => { if (n.active && n.health > 0 && n.role !== 'police' && n.position.distanceTo(position) < 20 && n.canSee(position, 22)) { n.state = n.role === 'hostile' || n.state === 'fight' ? 'fight' : 'flee'; n.timer = 8; n.lastKnown.copy(position); } }); }

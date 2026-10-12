@@ -17,7 +17,11 @@ export class Combat {
   update(dt:number,input:Input,camera:THREE.PerspectiveCamera,yaw:number){
     this.cooldown=Math.max(0,this.cooldown-dt);this.animation=Math.max(0,this.animation-dt);this.visual();
     if(this.inventory.update(dt))this.audio.tone(250,.1);
-    if(input.take('KeyR')&&this.inventory.reload())this.audio.tone(190,.1);
+    if(input.take('KeyR')) {
+      if(this.inventory.reload()) {this.audio.tone(190,.1);this.notify('RELOADING…');}
+      else if(this.inventory.weapon.type==='firearm'&&!this.inventory.reloading)this.notify(this.inventory.magazine===this.inventory.weapon.magazine?'MAGAZINE FULL':'NO RESERVE AMMUNITION · FIND AN AMMO BOX');
+    }
+    if(!this.player.driving&&(input.aiming||input.fireDown||this.animation>0))this.player.model.root.rotation.y=yaw;
     if(this.animation>0){this.player.model.arms[1].rotation.x=Math.sin(this.animation*Math.PI/.3)*1.5;this.player.model.torso.rotation.y=Math.sin(this.animation*Math.PI/.3)*.15;}
     else this.player.model.torso.rotation.y=0;
     if(input.aiming&&this.inventory.weapon.type==='firearm')this.player.model.arms[1].rotation.x=1.2;

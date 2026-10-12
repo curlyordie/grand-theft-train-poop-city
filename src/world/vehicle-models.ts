@@ -12,7 +12,7 @@ export function vehicleModel(definition:VehicleDefinition){
     compact(model.root,new Set(model.wheels));return model;
   }
   const root=new THREE.Group(),wheels:THREE.Mesh[]=[];
-  const wheel=(x:number,z:number,r=.34)=>{const w=cylinder(root,r,r,.18,[x,r+.03,z],'#283731',10);w.rotation.z=Math.PI/2;wheels.push(w);const h=cylinder(root,r*.45,r*.45,.2,[x,r+.03,z],'#b5b49c',8);h.rotation.z=Math.PI/2;};
+  const wheel=(x:number,z:number,r=.34)=>{const w=cylinder(root,r,r,.18,[x,r+.03,z],'#283731',24);w.rotation.z=Math.PI/2;wheels.push(w);const h=cylinder(root,r*.45,r*.45,.2,[x,r+.03,z],'#b5b49c',8);h.rotation.z=Math.PI/2;};
   if(kind==='motorcycle'){
     wheel(0,-.77,.35);wheel(0,.77,.35);
     box(root,[.2,.2,1.35],[0,.57,0],'#657267');box(root,[.42,.28,.64],[0,.91,-.2],colour);box(root,[.38,.13,.63],[0,1.04,.3],'#344239');

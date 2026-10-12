@@ -15,7 +15,7 @@ export class Inventory {
   reloading = 0;
   get weapon() { return WEAPONS.find(w => w.id === this.equipped)!; }
   get magazine() { return this.loaded[this.equipped] ?? 0; }
-  select(id: WeaponId) { if (!this.owned.has(id)) return false; this.equipped = id; this.reloading = 0; return true; }
+  select(id: WeaponId) { if (!this.owned.has(id)) return false; if (id !== this.equipped) this.reloading = 0; this.equipped = id; return true; }
   cycle(direction: number) { const options = WEAPONS.filter(w => this.owned.has(w.id)); const i = options.findIndex(w => w.id === this.equipped); this.select(options[(i + direction + options.length) % options.length].id); }
   acquire(id: WeaponId) {
     const weapon = WEAPONS.find(w => w.id === id)!;

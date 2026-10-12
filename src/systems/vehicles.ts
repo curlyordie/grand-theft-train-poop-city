@@ -19,6 +19,8 @@ export class Vehicle {
   collider: RAPIER.Collider;
   controller: RAPIER.KinematicCharacterController;
   position = new THREE.Vector3();
+  previousPosition = new THREE.Vector3();
+  previousYaw = 0;
   speed = 0;
   yaw = 0;
   occupied = false;
@@ -30,12 +32,13 @@ export class Vehicle {
     this.body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(spawn.x, definition.halfHeight + .06, spawn.z));
     this.collider = physics.world.createCollider(RAPIER.ColliderDesc.cuboid(definition.halfWidth, definition.halfHeight, definition.halfLength).setMass(definition.mass), this.body);
     this.controller = physics.world.createCharacterController(.025); this.controller.setSlideEnabled(true);
-    this.controller.enableSnapToGround(.15); this.sync();
+    this.controller.enableSnapToGround(.15); this.sync();this.previousPosition.copy(this.position);
   }
   reset() {
     this.speed = this.yaw = this.distanceDriven = 0; this.occupied = false; this.occupantCollider = undefined;
     const position = this.spawn.clone(); position.y = this.definition.halfHeight + .06;
     this.body.setTranslation(position, true); this.body.setNextKinematicTranslation(position);
+    this.previousPosition.copy(position);this.previousYaw=0;
     this.body.setRotation(new THREE.Quaternion(), true); this.body.setNextKinematicRotation(new THREE.Quaternion()); this.sync();
   }
   canEnter(player: Player) { return !this.occupied && player.position.distanceTo(this.position) < this.definition.halfLength + 1.9 && player.grounded && Math.abs(this.speed) < 3; }
@@ -71,6 +74,7 @@ export class Vehicle {
     return 'Both doors are blocked. Move to an open stretch of road.';
   }
   update(dt: number, input: Pick<Input, 'down'>, onCollision: (impact: number) => void) {
+    this.previousPosition.copy(this.position);this.previousYaw=this.yaw;
     this.collisionCooldown = Math.max(0, this.collisionCooldown - dt);
     if (!this.occupied && !this.ai) return;
     const accelerating = input.down('KeyW'), braking = input.down('KeyS');
@@ -93,12 +97,19 @@ export class Vehicle {
     const progress = Math.hypot(move.x, move.z), expected = Math.hypot(desired.x, desired.z);
     if (expected > .015 && progress < expected * .65) {
       const impact = Math.abs(this.speed);
-      this.speed *= -.12;
-      if (impact > 3 && this.collisionCooldown === 0) { onCollision(impact); this.collisionCooldown = .8; }
+      this.speed = 0;
+      if (impact > 3 && this.collisionCooldown === 0) { onCollision(impact); this.collisionCooldown = 1.5; }
     }
     this.distanceDriven += progress;
     this.body.setNextKinematicTranslation({ x: p.x + move.x, y: Math.max(this.definition.halfHeight + .025, p.y + move.y), z: p.z + move.z });
     this.model.wheels.forEach(w => w.rotation.x += this.speed * dt / .33);
+  }
+  render(alpha:number) {
+    if(!this.occupied&&!this.ai)return;
+    this.model.root.position.lerpVectors(this.previousPosition,this.position,alpha);
+    this.model.root.position.y-=this.definition.halfHeight+.03;
+    const delta=Math.atan2(Math.sin(this.yaw-this.previousYaw),Math.cos(this.yaw-this.previousYaw));
+    this.model.root.rotation.y=this.previousYaw+delta*alpha;
   }
   sync() {
     const p = this.body.translation(); this.position.set(p.x, p.y, p.z);

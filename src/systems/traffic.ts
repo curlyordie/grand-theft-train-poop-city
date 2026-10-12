@@ -30,7 +30,7 @@ export class Traffic {
       const forward=new THREE.Vector3(-Math.sin(v.yaw),0,-Math.cos(v.yaw));const origin=v.position.clone();origin.y=.8;
       const obstacle=this.physics.lineDistance(origin,forward,Math.max(5,Math.abs(v.speed)*.9),v.body);
       const limit=Math.abs(angle)>.35?4:danger&&v.position.distanceTo(player)<20?3:11;
-      const controls={down:(key:string)=>key==='KeyW'?route.wait<=0&&obstacle>v.definition.halfLength+2&&v.speed<limit:key==='KeyS'?obstacle<v.definition.halfLength+2||v.speed>limit+1:key==='KeyA'?angle>.05:key==='KeyD'?angle<-.05:false};
+      const controls={down:(key:string)=>key==='KeyW'?route.wait<=0&&obstacle>v.definition.halfLength+2&&v.speed<limit:key==='KeyS'?v.speed>.3&&(obstacle<v.definition.halfLength+2||v.speed>limit+1):key==='Space'?obstacle<v.definition.halfLength+2:key==='KeyA'?angle>.05:key==='KeyD'?angle<-.05:false};
       v.update(dt,controls,()=>{route.wait=1;});route.progress+=Math.abs(v.speed)*dt;
     }
   }
