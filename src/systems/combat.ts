@@ -10,11 +10,22 @@ import { weaponModel } from '../world/weapons';
 import { Fleet } from './fleet';
 
 export class Combat {
-  cooldown=0; animation=0; hits=0; attacks=0; shots=0; equipped=''; held?:THREE.Group;
+  cooldown=0; animation=0; hits=0; attacks=0; shots=0; equipped=''; held?:THREE.Group; sightWeapon?:THREE.Group; sightEquipped='';
   constructor(private physics:Physics,private player:Player,private npcs:NPCSystem,public inventory:Inventory,private effects:Effects,private audio:AudioSystem,private crime:(position:THREE.Vector3,severity:number,force?:boolean)=>void,private notify:(message:string)=>void,private fleet:Fleet){}
   visual(){if(this.equipped===this.inventory.equipped)return;this.equipped=this.inventory.equipped;this.held?.removeFromParent();this.held=weaponModel(this.inventory.equipped);this.held.position.set(0,-.53,-.12);this.held.rotation.x=this.inventory.weapon.type==='firearm'?Math.PI/2:-.5;this.player.model.arms[1].add(this.held);this.animation=0;}
   hit(npc:NPC,damage:number,point:THREE.Vector3,direction:THREE.Vector3){if(npc.damage(damage,this.player.position)){this.hits++;this.effects.blood(point,direction,damage>22);this.audio.tone(100,.09,'triangle',.15);this.npcs.alert(this.player.position);this.crime(this.player.position,npc.role==='police'?3:1);}}
   update(dt:number,input:Input,camera:THREE.PerspectiveCamera,yaw:number){
+    const sighting = input.aiming && !this.player.driving && this.inventory.weapon.type === 'firearm';
+    if (this.sightEquipped !== this.inventory.equipped) {
+      this.sightWeapon?.removeFromParent();
+      this.sightWeapon = weaponModel(this.inventory.equipped);
+      this.sightWeapon.position.set(0, -.10, -.28);
+      this.sightWeapon.scale.setScalar(.55);
+      camera.add(this.sightWeapon);
+      if (!camera.parent) this.player.model.root.parent?.add(camera);
+      this.sightEquipped = this.inventory.equipped;
+    }
+    if (this.sightWeapon) this.sightWeapon.visible = sighting;
     this.cooldown=Math.max(0,this.cooldown-dt);this.animation=Math.max(0,this.animation-dt);this.visual();
     if(this.inventory.update(dt))this.audio.tone(250,.1);
     if(input.take('KeyR')) {

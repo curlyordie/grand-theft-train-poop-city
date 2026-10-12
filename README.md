@@ -147,3 +147,11 @@ All geometry, signs, jokes and dialogue are original. Rab's shirt uses green-and
 ## Embedded art
 
 The offline HTML is approximately 25 MB because the glTF characters/car, photographed brick/bump/ground images and 1K HDR environment are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
+
+### Choosing free replacement textures
+
+The current brick colour/bump photos and brown-tinted grass ground photo come from the Three.js r180 examples; the lighting HDR is Poly Haven's Venice Sunset. See `ASSET-LICENSES.md` for exact sources and attribution.
+
+For better ground, weathered brick, rubble and rusty corrugated metal, choose assets from [Poly Haven](https://polyhaven.com/textures) or [ambientCG](https://ambientcg.com/). Both publish CC0 assets, free for commercial games without required attribution. Send the asset-page links and which surfaces they should replace. Prefer 1K or 2K JPG colour/albedo maps plus normal and roughness maps to keep the standalone HTML download manageable. Maps need material-specific tiling and colour-space settings; copying a full texture pack into the project alone does not apply it.
+
+Right-click with a firearm now switches to a close sight view with a narrower field of view and a camera-mounted weapon. The player body is hidden while aiming so it cannot cover the crosshair; releasing right-click returns to third person.
