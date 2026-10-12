@@ -1,0 +1,275 @@
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { City, SAFEHOUSE, SPAWN } from './world/city';
+import { cylinder, sign } from './world/models';
+import { Physics } from './systems/physics';
+import { Input } from './systems/input';
+import { Player } from './systems/player';
+import { FollowCamera } from './systems/camera';
+import { UI } from './systems/ui';
+import { AudioSystem } from './systems/audio';
+import { SaveSystem } from './systems/save';
+import { Pickups } from './systems/pickups';
+import { Missions } from './systems/missions';
+import { NPCSystem } from './systems/npcs';
+import { Inventory, WEAPONS } from './systems/inventory';
+import { Loot } from './systems/loot';
+import { Effects } from './systems/effects';
+import { Combat } from './systems/combat';
+import { Fleet } from './systems/fleet';
+import { Traffic } from './systems/traffic';
+import { Police } from './systems/police';
+
+export class Game {
+  scene = new THREE.Scene();
+  cityBatches: THREE.Mesh[] = [];
+  cityDetails: THREE.Object3D[] = [];
+  renderer: THREE.WebGLRenderer;
+  camera = new THREE.PerspectiveCamera(57, innerWidth / innerHeight, .08, 310);
+  physics = new Physics();
+  input: Input;
+  player: Player;
+  fleet: Fleet;
+  traffic: Traffic;
+  police: Police;
+  get vehicle() { return this.fleet.active; }
+  follow: FollowCamera;
+  pickups: Pickups;
+  missions: Missions;
+  npcs: NPCSystem;
+  inventory = new Inventory();
+  loot: Loot;
+  effects: Effects;
+  combat: Combat;
+  damageFlash = 0;
+  ui: UI;
+  audio = new AudioSystem();
+  storage = new SaveSystem();
+  health = 100;
+  cash = 250;
+  bottles = 0;
+  running = false;
+  started = false;
+  prompt = '';
+  footstepTime = 0;
+  lastTime = 0;
+  accumulator = 0;
+  frame = 0;
+  constructor() {
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); this.renderer.setSize(innerWidth, innerHeight);
+    const gl = this.renderer.getContext(); const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const software = info && /swiftshader|llvmpipe|software/i.test(String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)));
+    this.renderer.shadowMap.enabled = !software; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.25;
+    const canvas = this.renderer.domElement; canvas.id = 'scene'; canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Grand Theft Train: Poop City — 3D game');
+    document.querySelector('#app')!.replaceChildren(canvas);
+    this.scene.background = new THREE.Color('#d2c5a1'); this.scene.fog = new THREE.Fog('#d2c5a1', 65, 220);
+    this.scene.add(new THREE.HemisphereLight('#ffe9bd', '#6d8171', 2.1));
+    const sun = new THREE.DirectionalLight('#ffe2ae', 3.1); sun.position.set(-34, 58, 30); sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -75; sun.shadow.camera.right = 75; sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
+    sun.shadow.camera.near = 1; sun.shadow.camera.far = 160; sun.shadow.normalBias = .09; sun.shadow.bias = -.0006; this.scene.add(sun);
+    const city = new City(this.scene, this.physics); this.batchCity(city.root);
+    this.player = new Player(this.scene, this.physics); this.fleet = new Fleet(this.scene, this.physics); this.traffic = new Traffic(this.scene, this.physics, this.fleet);
+    this.npcs = new NPCSystem(this.scene, this.physics);
+    this.police = new Police(this.scene, this.physics, this.fleet, this.npcs, message => this.ui.toast(message));
+    this.input = new Input(canvas); this.follow = new FollowCamera(this.camera, this.physics);
+    this.pickups = new Pickups(this.scene); this.loot = new Loot(this.scene); this.effects = new Effects(this.scene);
+    this.combat = new Combat(this.physics, this.player, this.npcs, this.inventory, this.effects, this.audio, (position, severity, force) => this.police.crime(position, severity, force), message => this.ui.toast(message), this.fleet);
+    this.missions = new Missions(this.scene, (cash, title) => { this.cash += cash; this.ui.toast(`MISSION COMPLETE · ₹${cash}`, title); this.save(); });
+    this.input.onCaptureError = () => this.ui.toast('MOUSE LOOK NOT CAPTURED', 'Click the street to enable mouse look. If denied, allow pointer lock in your browser.');
+    const home = new THREE.Group(); home.position.copy(SAFEHOUSE); this.scene.add(home);
+    cylinder(home, .8, .8, .045, [0, .08, 0], '#b6d791', 24);
+    const marker = new THREE.Mesh(new THREE.ConeGeometry(.22, .5, 4), new THREE.MeshBasicMaterial({ color: '#d5eda6' })); marker.position.y = 2.4; marker.rotation.z = Math.PI; home.add(marker);
+    sign(home, 'RAB’S ROOMS • UPSTAIRS', 2.2, .5, [1.15, 2.8, 0], '#345e48', '#f3dfb0', 30).rotation.y = -Math.PI / 2;
+    this.ui = new UI({
+      newGame: () => this.start(false), continueGame: () => this.start(true), resume: () => this.resume(),
+      restart: () => this.restart(), mainMenu: () => this.menu(), pause: () => this.pause(),
+      selectWeapon: id => { this.inventory.select(id); this.ui.show('inventory'); },
+      settings: (volume, sensitivity) => { this.audio.volume = volume; this.follow.sensitivity = sensitivity; this.storage.setSettings({ volume, sensitivity }); },
+    });
+    this.ui.inventory = this.inventory;
+    const settings = this.storage.settings(); this.audio.volume = this.ui.volume = settings.volume; this.follow.sensitivity = this.ui.sensitivity = settings.sensitivity;
+    this.ui.hasSave = !!this.storage.load(); this.ui.show('menu');
+    this.camera.position.set(2, 8.5, 35); this.camera.lookAt(2, 2, -15);
+    window.addEventListener('resize', () => { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth, innerHeight); });
+    document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && this.running && this.started) this.pause(); });
+    window.addEventListener('blur', () => { if (this.running) this.pause(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && this.running) this.pause(); });
+    this.physics.step();
+    if (import.meta.env.DEV) {
+      // Read-only diagnostics for browser tests. Gameplay tests still use keyboard/mouse input.
+      Object.assign(window, { __game: { snapshot: () => this.snapshot() } });
+    }
+    requestAnimationFrame(this.loop);
+  }
+  batchCity(root: THREE.Group) {
+    root.updateMatrixWorld(true);
+    const buckets = new Map<string, THREE.BufferGeometry[]>(), originals: THREE.Mesh[] = [];
+    root.traverse(object => {
+      if (object instanceof THREE.Mesh && object.material instanceof THREE.MeshBasicMaterial) this.cityDetails.push(object);
+      if (!(object instanceof THREE.Mesh) || !(object.material instanceof THREE.MeshStandardMaterial)) return;
+      const geometry = object.geometry.clone().applyMatrix4(object.matrixWorld);
+      geometry.computeBoundingBox(); const size = geometry.boundingBox!.getSize(new THREE.Vector3()), centre = geometry.boundingBox!.getCenter(new THREE.Vector3());
+      const key = Math.max(size.x, size.z) > 100 ? 'infrastructure' : `${Math.floor(centre.x / 48)},${Math.floor(centre.z / 48)}`;
+      const count = geometry.attributes.position.count, colour = object.material.color, colours = new Float32Array(count * 3);
+      for (let i=0;i<count;i++) { colours[i*3]=colour.r; colours[i*3+1]=colour.g; colours[i*3+2]=colour.b; }
+      geometry.setAttribute('color', new THREE.BufferAttribute(colours,3));
+      if (!buckets.has(key)) buckets.set(key, []); buckets.get(key)!.push(geometry); originals.push(object);
+    });
+    originals.forEach(m => m.removeFromParent());
+    const material = new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.85});
+    buckets.forEach((geometries,key) => {
+      const geometry = mergeGeometries(geometries,false);
+      if (geometry) { geometry.computeBoundingSphere(); const mesh=new THREE.Mesh(geometry,material); mesh.castShadow=mesh.receiveShadow=true; mesh.userData.alwaysVisible=key==='infrastructure'; root.add(mesh); this.cityBatches.push(mesh); }
+      geometries.forEach(g=>g.dispose());
+    });
+  }
+  capture() { this.renderer.domElement.focus(); this.input.capture(this.renderer.domElement); }
+  save() {
+    const saved = this.storage.save({ version: 1, cash: this.cash, bottles: this.bottles, collected: this.pickups.collected, missions: this.missions.completed, inventory: this.inventory.serialise(), loot: this.loot.collected });
+    this.ui.hasSave = saved;
+    if (!saved) this.ui.toast('SAVING UNAVAILABLE', 'Browser storage is blocked. This session still works.');
+    return saved;
+  }
+  start(continuing: boolean) {
+    const data = continuing ? this.storage.load() : null;
+    this.health = 100; this.cash = data?.cash ?? 250; this.bottles = data?.bottles ?? 0; this.pickups.restore(data?.collected ?? []); this.npcs.reset(); this.missions.restore(data?.missions ?? []); this.inventory.restore(data?.inventory); this.loot.restore(data?.loot ?? []); this.combat.visual();
+    this.fleet.reset(); this.traffic.reset(); this.police.reset(); this.player.reset(); this.physics.step(); this.follow.reset(this.player.position);
+    this.started = true; this.save(); this.resume();
+    this.ui.toast(continuing ? 'BACK TO YOUR POOR DECISIONS' : 'WELCOME TO SUNDARPUR', '“I was having a perfectly shite day before this.”');
+  }
+  resume() { this.input.clear(); this.ui.hide(); this.running = this.input.active = true; this.accumulator = 0; this.audio.unlock(); this.audio.tone(300); this.capture(); }
+  pause(controls = false) {
+    this.running = this.input.active = false; this.input.clear(); this.ui.returnPage = 'pause'; this.ui.show(controls ? 'controls' : 'pause'); document.exitPointerLock(); this.audio.updateEngine(0, false);
+  }
+  menu() { this.save(); this.running = this.input.active = false; this.input.clear(); this.ui.show('menu'); document.exitPointerLock(); this.audio.updateEngine(0, false); }
+  restart() {
+    if (this.missions.state === 'failed') this.missions.interact(SAFEHOUSE.clone().setY(.84));
+    else if (this.missions.state === 'active') { this.missions.stage = 0; this.missions.parcel = false; }
+    this.fleet.reset(); this.traffic.reset(); this.police.reset(); this.player.reset(); this.health = 100; this.physics.step(); this.follow.reset(this.player.position); this.resume();
+    this.ui.toast('BACK AT THE CHECKPOINT', '“Aye, that’s gone well.”');
+  }
+  damagePlayer(amount: number, source: THREE.Vector3) {
+    if (amount <= 0) return;
+    this.health = Math.max(0, this.health - amount); this.damageFlash = .35;
+    this.effects.blood(this.player.position.clone().add(new THREE.Vector3(0,.5,0)), this.player.position.clone().sub(source).setY(0).normalize(), amount > 20);
+  }
+  interact() {
+    if (this.player.driving) {
+      const message = this.vehicle.exit(this.player);
+      this.input.pressed.delete('Space'); // A handbrake press must never become a queued jump on exit.
+      if (message) this.ui.toast(message); else this.audio.tone(170);
+      return;
+    }
+    const missionMessage = this.missions.interact(this.player.position);
+    if (missionMessage) { if (missionMessage === 'PARCEL COLLECTED') this.police.crime(this.player.position, 1, true); this.ui.toast(missionMessage); return; }
+    const loot = this.loot.nearest(this.player.position);
+    if (loot) { const name = this.loot.collect(loot.id, this.inventory); this.audio.tone(550, .15); this.save(); this.ui.toast(`PICKED UP · ${name}`); return; }
+    const item = this.pickups.nearest(this.player.position);
+    if (item && this.pickups.collect(item.id)) {
+      const stored = this.health >= 100;
+      if (!stored) this.health = Math.min(100, this.health + 35); else this.bottles++;
+      this.audio.tone(680, .28, 'triangle', .3); this.save();
+      this.ui.toast('BUCKFAST ACQUIRED', stored ? 'Stored when healthy. Press B to use when injured.' : '“That’s medicinal. Probably.”'); return;
+    }
+    if (this.player.position.clone().setY(0).distanceTo(SAFEHOUSE) < 2.2) {
+      this.health = 100; if (this.save()) this.ui.toast('CHECKPOINT SAVED · HEALTH RESTORED', '“Temporary accommodation. Permanent regrets.”'); return;
+    }
+    const witnessedTheft = this.npcs.witnesses(this.player.position) || !!this.fleet.nearest(this.player)?.driver;
+    if (this.fleet.enter(this.player)) {
+      if (witnessedTheft) this.police.crime(this.player.position, this.vehicle.definition.kind === 'police' ? 2 : 1, true);
+      this.follow.yaw = this.vehicle.yaw; this.audio.tone(180, .15); this.ui.toast(this.vehicle.definition.name.toUpperCase(), 'Borrowed. Indefinitely.'); return;
+    }
+    const npc = this.npcs.nearest(this.player.position);
+    if (npc) this.ui.toast(this.npcs.interact(npc, this.inventory.equipped !== 'fists'));
+  }
+  fixedUpdate(dt: number) {
+    if (this.input.take('KeyE')) this.interact();
+    if (this.input.take('KeyB')) {
+      if (!this.bottles) this.ui.toast('NO BUCKFAST IN YOUR POCKETS');
+      else if (this.health >= 100) this.ui.toast('ALREADY IN PERFECTLY SHITE HEALTH');
+      else { this.bottles--; this.health = Math.min(100, this.health + 35); this.save(); this.audio.tone(650, .25); this.ui.toast('HEALTH RESTORED · +35'); }
+    }
+    WEAPONS.forEach((w, i) => { if (this.input.take(`Digit${i + 1}`)) this.inventory.select(w.id); });
+    if (this.input.wheel) { this.inventory.cycle(Math.sign(this.input.wheel)); this.input.wheel = 0; }
+    this.player.update(dt, this.input, this.follow.yaw);
+    this.combat.update(dt, this.input, this.camera, this.follow.yaw);
+    this.effects.update(dt); this.damageFlash = Math.max(0, this.damageFlash - dt);
+    this.fleet.update(dt, this.input, impact => {
+      for (let i=0;i<this.vehicle.controller.numComputedCollisions();i++) {
+        const collider=this.vehicle.controller.computedCollision(i)?.collider;
+        const npc=this.npcs.npcs.find(n=>n.active&&n.health>0&&n.collider.handle===collider?.handle);
+        if (npc) { this.combat.hit(npc,Math.min(60,impact*5),npc.position.clone().add(new THREE.Vector3(0,.5,0)),new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))); if(npc.health>0)npc.state='flee'; }
+      }
+      this.audio.tone(70, .25, 'sawtooth', .35); this.damagePlayer(Math.ceil(Math.max(0, impact - 5) * 1.8), this.vehicle.position.clone().add(new THREE.Vector3(-Math.sin(this.vehicle.yaw),0,-Math.cos(this.vehicle.yaw))));
+      this.ui.toast('THAT’LL BUFF OUT', '“That’s somebody else’s problem now.”');
+    });
+    this.npcs.targetCollider = this.player.driving ? this.vehicle.collider : this.player.collider;
+    this.police.update(dt, this.player.position);
+    this.traffic.update(dt, this.player.position, this.police.level > 0);
+    this.npcs.update(dt, this.player.position, !this.player.driving && this.inventory.equipped !== 'fists', this.police.level, (amount, npc) => this.damagePlayer(amount, npc.position));
+    this.physics.step(); this.player.sync(); this.fleet.sync(); this.npcs.sync(); this.pickups.update(dt);
+    if (this.player.driving) this.player.position.copy(this.vehicle.position);
+    if (this.health <= 0 || this.player.position.y < -5) {
+      this.missions.fail(); this.npcs.reset();
+      this.cash = Math.max(0, this.cash - 50); this.fleet.reset(); this.traffic.reset(); this.police.reset(); this.player.reset(); this.health = 100; this.save();
+      this.follow.reset(SPAWN); this.ui.toast('BACK ON YOUR FEET · ₹50 LOST', '“I’ve made a series of outstandingly poor decisions.”');
+    }
+    const motor = this.fleet.vehicles.find(v=>v.id==='mission-sedan'); if(motor)this.missions.motorPosition.copy(motor.position).y=0;
+    this.missions.update(dt, { position: this.player.position, vehicleId: this.player.driving ? this.vehicle.id : null, speed: this.vehicle.speed, wanted: this.police.level });
+    this.prompt = this.player.driving ? Math.abs(this.vehicle.speed) > 3 ? '' : `Exit the ${this.vehicle.definition.name}` :
+      this.missions.interaction(this.player.position) || (this.loot.nearest(this.player.position) ? `Pick up ${this.loot.getName(this.loot.nearest(this.player.position)!.kind)}` : this.pickups.nearest(this.player.position) ? 'Collect Buckfast · +35 health / store' :
+        this.player.position.clone().setY(0).distanceTo(SAFEHOUSE) < 2.2 ? 'Save at Rab’s rooms · restore health' :
+          this.fleet.nearest(this.player) ? `Enter the ${this.fleet.nearest(this.player)!.definition.name}` : this.npcs.nearest(this.player.position) ? 'Talk to local (E)' : '');
+    this.footstepTime += dt;
+    if (!this.player.driving && this.player.grounded && this.player.velocity.clone().setY(0).length() > 1 && this.footstepTime > .32) { this.audio.tone(110, .045, 'triangle', .07); this.footstepTime = 0; }
+  }
+  loop = (time: number) => {
+    const dt = Math.min((time - this.lastTime) / 1000 || 0, .1); this.lastTime = time;
+    if (this.input.take('Escape')) {
+      if (this.running) this.pause();
+      else if (this.started && this.ui.page === 'pause') this.resume();
+      else if (this.ui.page !== 'menu') this.ui.show(this.ui.returnPage);
+    }
+    if (this.input.take('Tab')) { if (this.running) { this.pause(); this.ui.show('inventory'); } else if (this.ui.page === 'inventory') this.resume(); }
+    if (this.running && this.input.take('KeyH')) this.pause(true);
+    if (this.running) {
+      this.accumulator += dt;
+      while (this.accumulator >= 1 / 60) { this.fixedUpdate(1 / 60); this.accumulator -= 1 / 60; }
+      const driving = this.player.driving, position = driving ? this.vehicle.position : this.player.position;
+      const drivingHeight = this.vehicle.definition.kind === 'van' ? 2 : ['suv','rickshaw','motorcycle'].includes(this.vehicle.definition.kind) ? 1.6 : 1.15;
+      this.follow.update(dt, this.input, position, driving, driving ? this.vehicle.body : this.player.body, this.vehicle.yaw, !driving && this.input.aiming && this.inventory.weapon.type === 'firearm', drivingHeight);
+      // Hide the character when wall avoidance brings the camera inside his silhouette.
+      this.player.model.root.visible = this.camera.position.distanceTo(this.follow.target) > 1.2;
+      if (this.combat.held) this.combat.held.visible=!driving;
+      if (driving) {
+        const open=this.vehicle.definition.kind==='motorcycle'||this.vehicle.definition.kind==='rickshaw';
+        this.player.model.root.scale.setScalar(open?.9:.65);
+        const seat=new THREE.Vector3(open?0:.32,this.vehicle.definition.kind==='motorcycle'?.3:.18,.1);
+        this.vehicle.model.root.updateMatrixWorld(true);this.vehicle.model.root.localToWorld(seat);
+        this.player.model.root.position.copy(seat);this.player.model.root.rotation.y=this.vehicle.yaw;
+        this.player.model.root.rotation.z=this.vehicle.model.root.rotation.z;
+        this.player.model.legs.forEach(leg=>leg.rotation.x=.7);this.player.model.arms.forEach(arm=>arm.rotation.x=.9);
+      } else {this.player.model.root.scale.setScalar(1);this.player.model.root.rotation.z=0;}
+      this.audio.updateEngine(this.vehicle.speed, driving);
+      this.ui.update(dt, { player: this.player.position, car: this.vehicle.position, yaw: this.follow.yaw, driving, speed: this.vehicle.speed, health: this.health, cash: this.cash, bottles: this.bottles, prompt: this.prompt, collected: this.pickups.collected.length, distanceDriven: this.vehicle.distanceDriven, missionName: this.missions.name, objective: this.missions.objective, vehicleName: this.vehicle.definition.name, weapon: this.inventory.weapon.name, ammo: this.inventory.weapon.ammo ? `${this.inventory.magazine} / ${this.inventory.reserve[this.inventory.weapon.ammo]}` : 'MELEE', reloading: this.inventory.reloading > 0, damageFlash: this.damageFlash, wanted: this.police.level, searching: !this.police.seen, missionTarget: this.missions.target, locked: this.input.locked });
+    } else if (!this.started || this.ui.page === 'menu') {
+      this.camera.position.set(2 + Math.sin(time * .00007) * .5, 8.5, 35); this.camera.lookAt(2, 2, -15);
+    }
+    const location=this.running?this.player.position:new THREE.Vector3(2,0,15);
+    this.cityBatches.forEach(mesh=>{const bound=mesh.geometry.boundingSphere!;mesh.visible=mesh.userData.alwaysVisible||bound.center.distanceTo(location)<160+bound.radius;});
+    this.cityDetails.forEach(object=>{object.visible=object.getWorldPosition(new THREE.Vector3()).distanceTo(location)<135;});
+    this.renderer.render(this.scene, this.camera); this.frame++;
+    requestAnimationFrame(this.loop);
+  };
+  snapshot() {
+    return { exitAttemptSpeed: this.vehicle.lastExitAttemptSpeed, wanted: this.police.level, searching: !this.police.seen, unseen: this.police.unseen, policeLastKnown: this.police.lastKnown.toArray(), police: this.police.patrols.map(v=>({position:v.position.toArray(),ai:v.ai})), vehicles: this.fleet.vehicles.map(v => ({ id:v.id, kind:v.definition.kind, position:v.position.toArray(), spawnBlocked:this.physics.blocked(v.position,v.body.rotation(),v.collider.shape,v.collider), occupied:v.occupied, ai:v.ai, driver:v.driver, driverHealth:v.driverHealth, driverPosition:v.driverCollider?Object.values(v.driverCollider.translation()):null, speed:v.speed })), traffic: this.traffic.routes.map(r => ({id:r.vehicle.id, distance:r.progress})), vehicleId: this.vehicle.id, running: this.running, page: this.ui.page, position: this.player.position.toArray(), car: this.vehicle.position.toArray(), grounded: this.player.grounded, locked: this.input.locked, inventory: this.inventory.serialise(), reloading: this.inventory.reloading, combat: {hits:this.combat.hits, attacks:this.combat.attacks, shots:this.combat.shots}, particles: this.effects.activeCount, loot: this.loot.collected, npcs: this.npcs.npcs.filter(n => n.active).map(n => ({id:n.id, role:n.role, position:n.position.toArray(), health:n.health, state:n.state})), mission: { current: this.missions.current, state: this.missions.state, stage: this.missions.stage, completed: this.missions.completed },
+      driving: this.player.driving, speed: this.vehicle.speed, yaw: this.vehicle.yaw, cameraYaw: this.follow.yaw, cameraPosition: this.camera.position.toArray(),
+      health: this.health, cash: this.cash, bottles: this.bottles, collected: this.pickups.collected, prompt: this.prompt, distanceDriven: this.vehicle.distanceDriven,
+      characterVisible: this.player.model.root.visible, cameraDistance: this.camera.position.distanceTo(this.follow.target), cameraPitch: this.follow.pitch, damageFlash: this.damageFlash,
+      playerColliderEnabled: this.player.collider.isEnabled(), carCollisionCount: this.vehicle.controller.numComputedCollisions(),
+      carCollisions: Array.from({length: this.vehicle.controller.numComputedCollisions()}, (_, i) => { const c = this.vehicle.controller.computedCollision(i); return { position: c?.collider?.translation(), handle: c?.collider?.handle, normal: c?.normal1 }; }),
+      frame: this.frame, drawCalls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles };
+  }
+}
