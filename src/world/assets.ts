@@ -4,17 +4,18 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import civilianUrl from '../assets/civilian.glb?url';
 import humanUrl from '../assets/resident.glb?url';
+import bossUrl from '../assets/boss.glb?url';
 import carUrl from '../assets/car.glb?url';
 import brickUrl from '../assets/brick.jpg?url';
 import bumpUrl from '../assets/brick-bump.jpg?url';
 import groundUrl from '../assets/ground.jpg?url';
 import environmentUrl from '../assets/environment.hdr?url';
-let human:GLTF,car:GLTF,civilian:GLTF;
+let human:GLTF,car:GLTF,civilian:GLTF,boss:GLTF;
 
 export let brick:THREE.Texture,bump:THREE.Texture,ground:THREE.Texture,environment:THREE.DataTexture;
 export async function loadAssets(){
  const loader=new GLTFLoader(),textures=new THREE.TextureLoader();
- [human,car,civilian,brick,bump,ground,environment]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),textures.loadAsync(brickUrl),textures.loadAsync(bumpUrl),textures.loadAsync(groundUrl),new RGBELoader().loadAsync(environmentUrl)]);
+ [human,car,civilian,brick,bump,ground,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),textures.loadAsync(brickUrl),textures.loadAsync(bumpUrl),textures.loadAsync(groundUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl)]);
  brick.colorSpace=ground.colorSpace=THREE.SRGBColorSpace;
  for(const texture of [brick,bump,ground]){texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.anisotropy=4;}
  environment.mapping=THREE.EquirectangularReflectionMapping;
@@ -22,26 +23,27 @@ export async function loadAssets(){
 }
 export function humanModel(index=0,rab=false,official=false){
  const useCivilian=!rab&&!official&&index%3!==0;
- const root=new THREE.Group(),body=clone(useCivilian?civilian.scene:human.scene) as THREE.Group;root.add(body);
+ const root=new THREE.Group(),body=clone(rab?boss.scene:useCivilian?civilian.scene:human.scene) as THREE.Group;root.add(body);
  // Resident mesh is authored in centimetres under a 0.01 conversion node.
  // Skinned bounds before the first renderer skeleton update are not valid for sizing.
- body.scale.setScalar(useCivilian?1.06:1.02);body.position.y=.015;
+ body.scale.setScalar(rab?.95:useCivilian?1.06:1.02);body.position.y=.015;
  // Native front faces +Z; the game's character convention faces -Z.
- body.rotation.y=0;
- body.traverse(object=>{if(object instanceof THREE.Mesh){object.castShadow=object.receiveShadow=true;object.frustumCulled=true;if(object instanceof THREE.SkinnedMesh){object.geometry.computeBoundingSphere();object.boundingSphere=object.geometry.boundingSphere!.clone();object.boundingSphere.radius*=1.8;}object.material=(object.material as THREE.MeshStandardMaterial).clone();const mat=object.material as THREE.MeshStandardMaterial;mat.roughness=.82;mat.color.set(rab?'#d9d3bc':official?'#b8ad84':['#c7ba9c','#a9b6bd','#b6a485','#bfba9b'][index%4]);if(object.name==='vanguard_visor')object.visible=false;
-   if(rab){object.geometry=object.geometry.clone();const p=object.geometry.attributes.position,colours=new Float32Array(p.count*3);for(let i=0;i<p.count;i++){const z=p.getZ(i);const colour=z>174?new THREE.Color('#ad652e'):z>100&&z<143?new THREE.Color(Math.floor(z/7)%2?'#e4e1c8':'#348a50'):new THREE.Color('#ffffff');colours.set([colour.r,colour.g,colour.b],i*3);}object.geometry.setAttribute('color',new THREE.BufferAttribute(colours,3));mat.vertexColors=true;}}});
+ body.rotation.y=rab?Math.PI:0;
+ body.traverse(object=>{if(object instanceof THREE.Mesh){object.castShadow=object.receiveShadow=true;object.frustumCulled=true;if(object instanceof THREE.SkinnedMesh){object.geometry.computeBoundingSphere();object.boundingSphere=object.geometry.boundingSphere!.clone();object.boundingSphere.radius*=1.8;}object.material=(object.material as THREE.MeshStandardMaterial).clone();const mat=object.material as THREE.MeshStandardMaterial;mat.roughness=.82;mat.color.set(rab?'#ffffff':official?'#b8ad84':['#c7ba9c','#a9b6bd','#b6a485','#bfba9b'][index%4]);if(object.name==='vanguard_visor')object.visible=false;
+}});
  const mixer=new THREE.AnimationMixer(body);
- const walk=useCivilian?null:mixer.clipAction(human.animations.find(a=>a.name==='Walk')!);
- const idle=mixer.clipAction(useCivilian?civilian.animations.find(a=>a.name==='SambaDance')!:human.animations.find(a=>a.name==='Idle')!);
+ const walk=useCivilian?null:mixer.clipAction((rab?boss:human).animations.find(a=>a.name==='Walk')!);
+ const idle=mixer.clipAction(useCivilian?civilian.animations.find(a=>a.name==='SambaDance')!:(rab?boss:human).animations.find(a=>a.name==='Idle')!);
  walk?.play();idle.play();if(useCivilian){idle.time=.1;idle.paused=true;}mixer.update(0);body.updateMatrixWorld(true);
- const left=body.getObjectByName('mixamorigLeftUpLeg'),right=body.getObjectByName('mixamorigRightUpLeg');const leftPose=left?.quaternion.clone(),rightPose=right?.quaternion.clone();let strideTime=0;
+ const bone=(name:string)=>body.getObjectByName(name)??body.getObjectByName(name.replace('mixamorig','mixamorig:'));
+ const left=bone('mixamorigLeftUpLeg'),right=bone('mixamorigRightUpLeg');const leftPose=left?.quaternion.clone(),rightPose=right?.quaternion.clone();let strideTime=0;
  let seated=false;const originalPose=new Map<THREE.Object3D,THREE.Quaternion>();
  const poseDriving=(driving:boolean,open=false)=>{
   if(driving===seated)return;
   if(!driving){originalPose.forEach((q,b)=>b.quaternion.copy(q));originalPose.clear();seated=false;return;}
   seated=true;root.updateMatrixWorld(true);
   const axis=new THREE.Vector3(1,0,0).applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()));
-  const bend=(name:string,angle:number)=>{const bone=body.getObjectByName(name);if(!bone?.parent)return;originalPose.set(bone,bone.quaternion.clone());const world=bone.getWorldQuaternion(new THREE.Quaternion()),parent=bone.parent.getWorldQuaternion(new THREE.Quaternion());world.premultiply(new THREE.Quaternion().setFromAxisAngle(axis,angle));bone.quaternion.copy(parent.invert().multiply(world));root.updateMatrixWorld(true);};
+  const bend=(name:string,angle:number)=>{const joint=bone(name);if(!joint?.parent)return;originalPose.set(joint,joint.quaternion.clone());const world=joint.getWorldQuaternion(new THREE.Quaternion()),parent=joint.parent.getWorldQuaternion(new THREE.Quaternion());world.premultiply(new THREE.Quaternion().setFromAxisAngle(axis,angle));joint.quaternion.copy(parent.invert().multiply(world));root.updateMatrixWorld(true);};
   for(const side of ['Left','Right']){bend(`mixamorig${side}UpLeg`,open?1:1.25);bend(`mixamorig${side}Leg`,open?-.95:-1.2);bend(`mixamorig${side}Arm`,.8);}
  };
  const arms=[new THREE.Group(),new THREE.Group()],legs=[new THREE.Group(),new THREE.Group()],torso=new THREE.Group();

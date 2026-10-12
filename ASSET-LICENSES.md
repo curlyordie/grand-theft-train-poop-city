@@ -16,3 +16,7 @@ The runtime character is **Soldier/Vanguard**, a textured skinned character and 
 CesiumMan is retained as an unused development reference in the source tree. It is not loaded by the final game. Its attribution above applies to that file.
 
 **Michelle** is the second runtime resident mesh, obtained from [Three.js r180's Michelle.glb example](https://github.com/mrdoob/three.js/blob/r180/examples/models/gltf/Michelle.glb). It uses its native posed skeleton with added procedural leg movement. The same Three.js/Mixamo source and game-use attribution above applies. It is included as part of the game, not supplied as an independent asset product.
+
+## User-selected player replacement
+
+**The Boss**: supplied by the user as `The Boss.fbx`, with Mixamo rig naming and embedded diffuse, normal and specular maps. Converted to `src/assets/boss.glb`, preserving the character textures, with project-generated idle/walk loops and game scale/orientation adjustments. Adobe Mixamo's [FAQ](https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html) permits royalty-free character use within games. It replaces the previous Soldier mesh for the player only. The uploaded file did not include walking clips, so these are simple authored loops, not new Mixamo animations.
