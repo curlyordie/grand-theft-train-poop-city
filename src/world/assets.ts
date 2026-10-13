@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { loadSurfaceMaps } from './surfaces';
 import { loadAudioAssets } from '../systems/audio-assets';
 import { loadPropAssets } from './prop-assets';
+import {loadVehicleAssets} from './vehicle-assets';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import { CharacterMotion,loadMotions,type MotionOptions } from './motion';
 import { loadWeaponAssets } from './weapon-assets';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
@@ -20,9 +22,9 @@ let human:GLTF,car:GLTF,civilian:GLTF,boss:GLTF;
 const additions={} as Record<Exclude<CivilianKind,'remy'>,GLTF>;
 export let environment:THREE.DataTexture;
 export async function loadAssets(){
- const loader=new GLTFLoader(),textures=new THREE.TextureLoader();
+ const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),textures=new THREE.TextureLoader();
  [human,car,civilian,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl),loadSurfaceMaps(textures),loadWeaponAssets(loader),loadMotions(),loadPropAssets(loader),loadAudioAssets(),
-  Promise.all([loader.loadAsync(kurtaUrl),loader.loadAsync(citysideUrl),loader.loadAsync(citysideUnriggedUrl)]).then(([kurta,cityside,unrigged])=>Object.assign(additions,{kurta,cityside,'cityside-unrigged':unrigged}))]);
+  Promise.all([loader.loadAsync(kurtaUrl),loader.loadAsync(citysideUrl),loader.loadAsync(citysideUnriggedUrl)]).then(([kurta,cityside,unrigged])=>Object.assign(additions,{kurta,cityside,'cityside-unrigged':unrigged})),loadVehicleAssets(loader)]);
  environment.mapping=THREE.EquirectangularReflectionMapping;
 }
 

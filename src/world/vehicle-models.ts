@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { importedCar } from './assets';
 import { carModel, box, cylinder, sign } from './models';
 import { compact } from './compact';
+import {uploadedVehicle} from './vehicle-assets';
 import type { VehicleDefinition } from './vehicle-data';
 
-export function vehicleModel(definition:VehicleDefinition){
+export function vehicleModel(definition:VehicleDefinition,id='hatchback'){
+  const upload=uploadedVehicle(definition,id);if(upload)return upload;
   const {kind,colour}=definition;
   if(kind==='hatchback'||kind==='sedan'||kind==='police'||kind==='suv'){
     const real=importedCar(colour,definition.halfWidth*2,definition.halfLength*2);

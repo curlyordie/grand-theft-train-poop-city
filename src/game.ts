@@ -308,7 +308,7 @@ export class Game {
         const open=this.vehicle.definition.kind==='motorcycle'||this.vehicle.definition.kind==='rickshaw';
         this.player.model.animateDriving(dt,open);
         const kind=this.vehicle.definition.kind,seatDesired=new THREE.Vector3(open?0:.32,kind==='motorcycle'?.3:.18,.1);
-        const cabinHeight=kind==='van'?2.2:kind==='rickshaw'?1.7:kind==='pickup'?1.9:1.38;
+        const cabinHeight=this.vehicle.cabinHeight;
         const fit=kind==='motorcycle'?{scale:.9,position:seatDesired}:this.player.model.fitDriving(new THREE.Vector3(-this.vehicle.definition.halfWidth+.1,.07,-this.vehicle.definition.halfLength+.2),new THREE.Vector3(this.vehicle.definition.halfWidth-.1,cabinHeight,this.vehicle.definition.halfLength-.2),open?.85:.65,seatDesired);
         this.player.model.root.scale.setScalar(fit.scale);
         const seat=fit.position;

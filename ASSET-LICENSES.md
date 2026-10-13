@@ -86,3 +86,9 @@ Adaptations: selected assembled variants, ground alignment, orientation, placeme
 ## Recorded soundtrack and effects
 
 See [AUDIO-SOURCES.md](AUDIO-SOURCES.md) and `src/assets/audio/sources.json` for the 25 embedded music and effect files, exact pinned source links, credits, licences and adaptations. Complete source licence notices are retained in `src/assets/audio/licenses/`. The game Credits also name the audio authors.
+
+## User-supplied vehicles
+
+Mercedes-Benz GLS 580, Koenigsegg Agera, Car Upload (displayed as Old Town SUV) and the motorbike were supplied by the user in three ZIPs and a RAR. These archives contain Blender scene sources but no separate creator credit or licence document. Included here as part of the game. Adaptations: scene/model selection, removal of showcase platforms/road, baked static poses, forward orientation, detailed game display meshes, proportional sizing, fitted collision/cabin bounds, paint variations and wheel pivots. The Agera's nine disconnected outlier vertices are omitted. Dashboard maps are embedded as WebP; absent linked source images are replaced by shader colours rather than downloaded from an unknown source. The supplied three cars and bike are bundled locally. Existing rickshaws remain the project's procedural model.
+
+Vehicle geometry, including the retained ToyCar, is packed with Meshopt. Position error is bounded relative to the model size, staying below a millimetre at game scale. The original ToyCar's material maps remain unchanged. The Meshopt decoder is by Arseny Kapoulkine, licensed under MIT; its copyright/permission notice is embedded in the standalone HTML.

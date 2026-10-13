@@ -20,6 +20,21 @@ Talking On Phone and Texting And Walking occur at independently random intervals
 
 Standing React Death Forward replaces the earlier Death From The Front request. It plays once and holds the final pose for all civilian types, police, The Boss and vehicle drivers. Dead NPC colliders are disabled; resets restore the living rig. The Boss respawns after the clip finishes using the existing cash penalty. Enclosed driver animations stay fitted to their vehicle cabin.
 
+## Uploaded vehicles
+
+| Upload | Applied model |
+|---|---|
+| 32-mercedes-benz-gls-580-2020.zip | Mercedes-Benz GLS 580 |
+| 82-koenigsegg-agera.zip | Koenigsegg Agera |
+| 51-car.rar | Old Town SUV (the supplied Car Upload Blender model) |
+| 57-moto1.zip | Classic Motorbike |
+
+New models are mixed among cars and traffic; motorcycles use the supplied bike. The starter Shanti, mission sedan and existing police appearance are retained. No rickshaw model is present in these four archives; existing rickshaws are included in the varied parking distribution.
+
+The extra 20 parked vehicles now choose random clear street positions and face along the road. Existing starter/mission placements remain stable, as do vehicle IDs and reset positions. Parking checks buildings, street props and other cars, with clearance around the starting area. Imported models are uniformly scaled to preserve proportions, and collision hulls are derived from their fitted dimensions. Driver height fitting uses the actual roof height. The Agera's four wheels and the bike's two wheels rotate while moving.
+
+Conversions omit showcase platforms and the motorcycle's road, bake static modifier/shape-key poses, correct front direction, and remove nine isolated outlier vertices from the Agera. Detailed display meshes and Meshopt compression keep the standalone file within GitHub's limit. The original ToyCar's unused showcase nodes are removed and its geometry is also packed; its existing material maps are retained. Missing linked images in the source archives are not fetched; supplied shaders and fallback paint/glass/rubber materials provide the vehicle surfaces.
+
 | Surface or slot | Applied source |
 |---|---|
 | Roads | Asphalt 02, 2K |

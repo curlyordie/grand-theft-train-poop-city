@@ -28,20 +28,24 @@ export class Vehicle {
   crashes = 0;
   lastImpactCollider?: RAPIER.Collider;
   distanceDriven = 0;
-  constructor(scene: THREE.Scene, private physics: Physics, public definition: VehicleDefinition = VEHICLE_TYPES.hatchback, public spawn = CAR_SPAWN.clone(), public id = 'hatchback') {
-    this.model = vehicleModel(definition);
+  constructor(scene: THREE.Scene, private physics: Physics, public definition: VehicleDefinition = VEHICLE_TYPES.hatchback, public spawn = CAR_SPAWN.clone(), public id = 'hatchback',public spawnYaw=0) {
+    this.model = vehicleModel(definition,id);
+    const dimensions=this.model.root.userData.dimensions as THREE.Vector3|undefined;
+    if(dimensions){this.definition=definition={...definition,name:this.model.root.userData.vehicleName,halfWidth:Math.max(.24,dimensions.x/2),halfLength:dimensions.z/2,halfHeight:Math.max(.35,dimensions.y/2)};}
+    this.yaw=this.previousYaw=spawnYaw;
     scene.add(this.model.root);
     this.body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(spawn.x, definition.halfHeight + .06, spawn.z));
+    const rotation=new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP,spawnYaw);this.body.setRotation(rotation,true);this.body.setNextKinematicRotation(rotation);
     this.collider = physics.world.createCollider(RAPIER.ColliderDesc.cuboid(definition.halfWidth, definition.halfHeight, definition.halfLength).setMass(definition.mass), this.body);
     this.controller = physics.world.createCharacterController(.025); this.controller.setSlideEnabled(true);
     this.controller.enableSnapToGround(.15); this.sync();this.previousPosition.copy(this.position);
   }
   reset() {
-    this.speed = this.yaw = this.distanceDriven = 0; this.occupied = false; this.occupantCollider = undefined;
+    this.speed = this.distanceDriven = 0;this.yaw=this.spawnYaw; this.occupied = false; this.occupantCollider = undefined;
     const position = this.spawn.clone(); position.y = this.definition.halfHeight + .06;
     this.body.setTranslation(position, true); this.body.setNextKinematicTranslation(position);
-    this.previousPosition.copy(position);this.previousYaw=0;this.crashes=0;this.lastImpactCollider=undefined;this.collisionCooldown=0;
-    this.body.setRotation(new THREE.Quaternion(), true); this.body.setNextKinematicRotation(new THREE.Quaternion()); this.sync();
+    this.previousPosition.copy(position);this.previousYaw=this.spawnYaw;this.crashes=0;this.lastImpactCollider=undefined;this.collisionCooldown=0;
+    const rotation=new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP,this.spawnYaw);this.body.setRotation(rotation, true); this.body.setNextKinematicRotation(rotation); this.sync();
   }
   canEnter(player: Player) { return !this.occupied && player.position.distanceTo(this.position) < this.definition.halfLength + 1.9 && player.grounded && Math.abs(this.speed) < 3; }
   enableDriver(model: THREE.Group, health = 55) {
@@ -61,10 +65,11 @@ export class Vehicle {
     if(this.driverHealth!==0||!this.driverModel)return;
     this.driverModel.userData.motion?.update(dt,0);
     if(this.definition.kind==='motorcycle')return;
-    const kind=this.definition.kind,height=kind==='van'?2.2:kind==='rickshaw'?1.7:kind==='pickup'?1.9:1.38;
+    const height=this.cabinHeight;
     const fit=this.driverModel.userData.fitDriving?.(new THREE.Vector3(-this.definition.halfWidth+.1,.07,-this.definition.halfLength+.2),new THREE.Vector3(this.definition.halfWidth-.1,height,this.definition.halfLength-.2),.65,new THREE.Vector3(.32,.18,.1));
     if(fit){this.driverModel.scale.setScalar(fit.scale);this.driverModel.position.copy(fit.position);}
   }
+  get cabinHeight(){const kind=this.definition.kind;return this.model.root.userData.cabinHeight??(kind==='van'?2.2:kind==='rickshaw'?1.7:kind==='pickup'?1.9:1.38);}
   enter(player: Player) {
     if (!this.canEnter(player)) return false;
     this.occupied = player.driving = true; this.ai = this.driver = false;
@@ -130,12 +135,12 @@ export class Vehicle {
     }
     this.distanceDriven+=movement.length();
     this.body.setNextKinematicTranslation({x:p.x+movement.x,y:this.definition.halfHeight+.04,z:p.z+movement.z});
-    this.model.wheels.forEach(w => w.rotation.x += this.speed * dt / .33);
+    this.model.wheels.forEach(w => w.rotation.x += this.speed * dt / (w.userData.radius??.33));
     if(this.driver&&this.driverModel){
       const kind=this.definition.kind,open=kind==='motorcycle'||kind==='rickshaw';
       this.driverModel.userData.animateDriving?.(dt,open);
       if(kind!=='motorcycle'){
-        const height=kind==='van'?2.2:kind==='rickshaw'?1.7:kind==='pickup'?1.9:1.38;
+        const height=this.cabinHeight;
         const fit=this.driverModel.userData.fitDriving?.(new THREE.Vector3(-this.definition.halfWidth+.1,.07,-this.definition.halfLength+.2),new THREE.Vector3(this.definition.halfWidth-.1,height,this.definition.halfLength-.2),.65,new THREE.Vector3(.32,.18,.1));
         if(fit){this.driverModel.scale.setScalar(fit.scale);this.driverModel.position.copy(fit.position);}
       }

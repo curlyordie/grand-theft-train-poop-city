@@ -5,6 +5,8 @@ import { gzipSync } from 'node:zlib';
 const directory = resolve('dist');
 const destination = resolve(directory, 'Grand-Theft-Train-Poop-City.html');
 let html = await readFile(resolve(directory, 'index.html'), 'utf8');
+const meshoptLicence=await readFile(resolve('node_modules/meshoptimizer/LICENSE.md'),'utf8');
+html=html.replace('</head>',()=>`<!-- Meshopt decoder licence\n${meshoptLicence}\n-->\n</head>`);
 
 // basE91 carries a gzip bundle in printable HTML with less overhead than base64.
 // Its alphabet excludes single quotes and backslashes so the payload needs no JS escapes.
@@ -60,6 +62,6 @@ for (const match of [...html.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="([
 if (/<script\b[^>]*\bsrc=|<link\b[^>]*rel="(?:stylesheet|modulepreload)"/i.test(html)) {
   throw new Error('Standalone output still references external code or styles.');
 }
-await writeFile(destination, html);
 if(Buffer.byteLength(html)>=100*1024*1024)throw new Error('Standalone HTML exceeds GitHub\'s 100 MiB limit');
+await writeFile(destination, html);
 console.log(`Standalone game: ${destination} (${Buffer.byteLength(html).toLocaleString()} bytes)`);

@@ -148,7 +148,7 @@ City architecture, street dressing, signs, jokes and dialogue are created by thi
 
 ## Embedded art
 
-The offline HTML is approximately 102 MB because characters, cars, 14 street prop models, PBR surface maps, weapons, action clips and HDR lighting are embedded. The script bundle is stored as gzip in a printable basE91 payload and decoded locally on startup, keeping the single file under GitHub's 100 MiB limit. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
+The offline HTML is approximately 104 MB because characters, cars, 14 street prop models, PBR surface maps, weapons, action clips and HDR lighting are embedded. The script bundle is stored as gzip in a printable basE91 payload and decoded locally on startup, keeping the single file under GitHub's 100 MiB limit. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
 
 ### Choosing free replacement textures
 
@@ -187,3 +187,5 @@ Sundarpur now has a purple dusk sky, striped sunset, cyan/pink shopfront neon, l
 Two free licensed electronic tracks respond to movement, cruising, combat and police heat through filtering, gain changes and crossfades. A 25-file audio bank supplies gunshots, magazine/rifle reloads, blade swings and hits, punches, bullet impacts, car/motorcycle engines, tyre skids, crashes, doors, pickups, footsteps, landings, street ambience and a money reward cha-ching. Engine pitch and level follow speed, throttle and approximate automatic gears. Music dips beneath important effects.
 
 Settings contains separate **Master Volume** and **Synthwave Soundtrack** sliders. A soundtrack value of zero preserves effect playback. Browser autoplay rules mean audio starts from New Game, Continue or Resume. Pausing fades music and stops effect voices. Everything is embedded in the one HTML and works offline. See [AUDIO-SOURCES.md](AUDIO-SOURCES.md) for source links and licensing.
+
+The supplied Mercedes GLS, Koenigsegg Agera, Old Town SUV and Classic Motorbike are mixed around the city. Extra parked cars, bikes and existing rickshaws use random street positions checked against solid obstacles. Imported models keep their proportions, face their travel direction and use fitted collision/cabin bounds. See `REQUESTED-ASSETS.md` for the upload mapping.
