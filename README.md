@@ -158,6 +158,8 @@ For better ground, weathered brick, rubble and rusty corrugated metal, choose as
 
 Right-click with a firearm now switches to a close sight view with a narrower field of view and a camera-mounted weapon. The player body is hidden while aiming so it cannot cover the crosshair; releasing right-click returns to third person.
 
+The follow camera now applies wall clearance only when a ray actually hits an obstacle. Its distance stays stable while idle and across varying frame timings, removing repeated inward zooming in open space while retaining wall avoidance.
+
 The player now uses the user-supplied Mixamo **The Boss** model with embedded textures and the uploaded action animations. All civilians, including civilian drivers, now use the user-supplied Mixamo **Remy** model with embedded textures and the uploaded action animations; police retain Soldier. See `REQUESTED-ASSETS.md` for all applied selections.
 
 The Boss has stronger walking arm swing and real skeleton poses for firearm holding, aiming/reloading and melee punches. Weapon attachment follows his imported hand. Uploaded action clips supply movement, attacks, reloading and driving.

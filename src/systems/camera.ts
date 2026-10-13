@@ -37,14 +37,14 @@ export class FollowCamera {
     let distance = radius;
     for (const offset of [-.22, 0, .22]) {
       const origin = this.target.clone().addScaledVector(side, offset);
-      distance = Math.min(distance, this.physics.lineDistance(origin, direction, radius, body) - .3);
+      distance = Math.min(distance, this.physics.lineDistance(origin, direction, radius, body, .3));
     }
     const desired = this.target.clone().addScaledVector(direction, Math.max(.55, distance));
     if (aiming || enteringAim) this.camera.position.copy(desired);
     else this.camera.position.lerp(desired, 1 - Math.exp(-dt * 14));
     // Clamp after smoothing: smoothing alone can leave a camera inside a wall during a sharp orbit.
     const actual = this.camera.position.clone().sub(this.target), length = actual.length();
-    const clear = this.physics.lineDistance(this.target, actual.normalize(), length, body) - .25;
+    const clear = this.physics.lineDistance(this.target, actual.normalize(), length, body, .25);
     if (clear < length) this.camera.position.copy(this.target).addScaledVector(actual, Math.max(.5, clear));
     this.camera.lookAt(this.target);
   }

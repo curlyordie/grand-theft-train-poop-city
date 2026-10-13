@@ -2,6 +2,8 @@
 
 The Boss is the player; all civilians and civilian drivers use Remy, scaled to match The Boss. Police retain Soldier.
 
+Remy uses the user-supplied `Remy_Face_Texture_Final.png` from `Remy_Face_Texture_Final_Package.zip` in the Bodymat diffuse slot. Its original 2048 × 2048 UV layout is retained and encoded as high-quality WebP inside the GLB. All other embedded maps, mesh/UV data, skeletons and animation data are preserved.
+
 | Surface or slot | Applied source |
 |---|---|
 | Roads | Asphalt 02, 2K |

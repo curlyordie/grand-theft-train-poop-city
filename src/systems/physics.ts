@@ -15,9 +15,10 @@ export class Physics {
     return this.world.intersectionWithShape(position, rotation, shape, undefined, undefined, exclude, exclude.parent() ?? undefined,
       c => c.handle !== this.ground.handle) !== null;
   }
-  lineDistance(from: THREE.Vector3, direction: THREE.Vector3, distance: number, exclude?: RAPIER.RigidBody) {
+  lineDistance(from: THREE.Vector3, direction: THREE.Vector3, distance: number, exclude?: RAPIER.RigidBody, clearance = 0) {
     const hit = this.world.castRay(new RAPIER.Ray(from, direction), distance, true, undefined, undefined, undefined, exclude);
-    return hit ? hit.timeOfImpact : distance;
+    // An unobstructed ray keeps its full length; clearance only applies to a hit.
+    return hit ? Math.max(0, hit.timeOfImpact - clearance) : distance;
   }
   step() { this.world.timestep = 1 / 60; this.world.step(); }
 }

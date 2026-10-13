@@ -23,6 +23,8 @@ CesiumMan is retained as an unused development reference in the source tree. It 
 
 **Remy**: supplied by the user as `Remy.fbx.zip`, downloaded by them from Adobe Mixamo. Converted to `src/assets/remy.glb` with its embedded diffuse/normal textures and subsequently uploaded Mixamo actions. It replaces Michelle and the non-police Soldier residents, including civilian drivers. The Boss remains the player; Soldier remains police. Mixamo's royalty-free game-use terms above apply. Michelle is retained as an unused source reference, no longer bundled or loaded by the game.
 
+**Remy face retexture**: supplied by the user as `Remy_Face_Texture_Final_Package.zip`. The replacement `Remy_Face_Texture_Final.png` is applied to Remy's Bodymat diffuse map at its original 2048 × 2048 resolution, encoded as WebP for the embedded game. The package supplies no additional creator credit or licence statement. All other model maps, geometry, UVs, skeleton and animations are preserved.
+
 ## User-selected 2K surface materials
 
 - **Asphalt 02**, [Poly Haven source](https://polyhaven.com/a/asphalt_02), CC0: roads and broken road patches.
