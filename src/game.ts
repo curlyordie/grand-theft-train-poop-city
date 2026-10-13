@@ -62,12 +62,15 @@ export class Game {
   lastTime = 0;
   accumulator = 0;
   frame = 0;
+  private renderRequested = true;
+  private lastRenderTime = 0;
+  private menuFrameInterval = 1000 / 30;
   constructor() {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); this.renderer.setSize(innerWidth, innerHeight);
     const gl = this.renderer.getContext(); const info = gl.getExtension('WEBGL_debug_renderer_info');
     const software = info && /swiftshader|llvmpipe|software/i.test(String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)));
-    if(software)this.renderer.setPixelRatio(.65);
+    if(software){this.renderer.setPixelRatio(.65);this.menuFrameInterval=1000/3;}
     this.renderer.shadowMap.enabled = !software; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = .95;
     const canvas = this.renderer.domElement; canvas.id = 'scene'; canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Grand Theft Train: Poop City — 3D game');
@@ -104,7 +107,7 @@ export class Game {
     this.audio.music.volume=this.ui.music=settings.music;
     this.ui.hasSave = !!this.storage.load(); this.ui.show('menu');
     this.camera.position.set(2, 8.5, 35); this.camera.lookAt(2, 2, -15);
-    window.addEventListener('resize', () => { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth, innerHeight); });
+    window.addEventListener('resize', () => { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth, innerHeight);this.renderRequested=true; });
     document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && this.running && this.started) this.pause(); });
     window.addEventListener('blur', () => { if (this.running) this.pause(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.running) this.pause(); });
@@ -176,7 +179,7 @@ export class Game {
   pause(controls = false) {
     this.running = this.input.active = false; this.input.clear(); this.ui.returnPage = 'pause'; this.ui.show(controls ? 'controls' : 'pause'); document.exitPointerLock(); this.audio.updateEngine(0, false);this.audio.pause();
   }
-  menu() { this.save(); this.running = this.input.active = false; this.input.clear(); this.ui.show('menu'); document.exitPointerLock(); this.audio.updateEngine(0, false);this.audio.pause(); }
+  menu() { this.save(); this.running = this.input.active = false;this.renderRequested=true; this.input.clear(); this.ui.show('menu'); document.exitPointerLock(); this.audio.updateEngine(0, false);this.audio.pause(); }
   restart() {
     if (this.missions.state === 'failed') this.missions.interact(SAFEHOUSE.clone().setY(.84));
     else if (this.missions.state === 'active') { this.missions.stage = 0; this.missions.parcel = false; }
@@ -301,13 +304,18 @@ export class Game {
     this.audio.setListener(this.camera.position,this.camera.getWorldDirection(new THREE.Vector3()));
     this.audio.updateMusic({running:this.running,driving:this.player.driving,speed:this.vehicle.speed,movement:Math.hypot(this.player.velocity.x,this.player.velocity.z),wanted:this.police.level,attacks:this.combat.attacks,hurt:this.damageFlash>0});
     const music=this.audio.music.snapshot();
-    this.retrowave.update(this.camera,location,music.beat,this.police.level/3+(this.player.driving?Math.min(1,Math.abs(this.vehicle.speed)/30):0)*.3);
     this.ui.hud.querySelector('#music-mode')!.textContent=this.audio.music.volume===0||this.audio.volume===0?'MUSIC OFF':music.mode;
-    this.loot.update(location);
-    this.streetProps.update(location);
-    this.cityBatches.forEach(mesh=>{const bound=mesh.geometry.boundingSphere!;mesh.visible=mesh.userData.alwaysVisible||bound.center.distanceTo(location)<160+bound.radius;});
-    this.cityDetails.forEach(object=>{object.visible=object.getWorldPosition(new THREE.Vector3()).distanceTo(location)<135;});
-    this.renderer.render(this.scene, this.camera); this.frame++;
+    const menuVisible=!this.started||this.ui.page==='menu';
+    // Keep a frozen view behind pause/settings, while polling input and audio normally.
+    // Resize invalidates that view; gameplay always renders the next animation frame.
+    if(this.running||this.renderRequested||(menuVisible&&time-this.lastRenderTime>=this.menuFrameInterval)){
+      this.retrowave.update(this.camera,location,music.beat,this.police.level/3+(this.player.driving?Math.min(1,Math.abs(this.vehicle.speed)/30):0)*.3);
+      this.loot.update(location);
+      this.streetProps.update(location);
+      this.cityBatches.forEach(mesh=>{const bound=mesh.geometry.boundingSphere!;mesh.visible=mesh.userData.alwaysVisible||bound.center.distanceTo(location)<160+bound.radius;});
+      this.cityDetails.forEach(object=>{object.visible=object.getWorldPosition(new THREE.Vector3()).distanceTo(location)<135;});
+      this.renderer.render(this.scene, this.camera);this.frame++;this.lastRenderTime=time;this.renderRequested=false;
+    }
     requestAnimationFrame(this.loop);
   };
   snapshot() {

@@ -17,7 +17,10 @@ export async function walkTo(page:Page,x:number,z:number,radius=1.2,timeout=3500
     if(Math.abs(error)>.08){await setKeys(page,[]);await look(page,heading);continue;}
     const keys:string[]=['KeyW'];if(distance>6)keys.push('ShiftLeft');
     await setKeys(page,keys);await page.waitForTimeout(180);
-  }throw new Error(`Could not walk to ${x},${z}; state=${JSON.stringify((await state(page)).position)}`);}finally{await setKeys(page,[]);}
+  }
+  // A slow rendered frame can deliver the last movement after the wall-clock deadline.
+  const final=await state(page);if(final.running&&Math.hypot(x-final.position[0],z-final.position[2])<radius)return;
+  throw new Error(`Could not walk to ${x},${z}; state=${JSON.stringify(final.position)}`);}finally{await setKeys(page,[]);}
 }
 export async function walkPath(page:Page,path:number[][]){for(const [x,z]of path)await walkTo(page,x,z);}
 export async function approachNPC(page:Page,id:number){

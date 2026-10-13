@@ -13,6 +13,8 @@ test('retrowave world and recorded audio follow real pickups, firing, reloads, r
  await page.keyboard.press('Escape');await page.click('#main-menu');await page.click('#new-game');await walkTo(page,3.2,12.5);await page.keyboard.press('KeyE');await expect.poll(async()=>(await state(page)).driving).toBe(true);await page.keyboard.down('KeyW');await expect.poll(async()=>Math.abs((await state(page)).speed)).toBeGreaterThan(10);await brake(page);
  expect((await state(page)).audio.engine.driving).toBe(true);expect((await state(page)).audio.loops).toBe(4);expect((await state(page)).music.mode).toMatch(/NIGHT DRIVE|PURSUIT|DANGER/);
  await page.keyboard.press('Escape');await expect.poll(async()=>(await state(page)).music.audible).toBe(false);
+ const pausedFrame=(await state(page)).frame;await page.waitForTimeout(250);expect((await state(page)).frame).toBe(pausedFrame);
+ await page.setViewportSize({width:500,height:380});await expect.poll(async()=>(await state(page)).frame).toBeGreaterThan(pausedFrame);
  await page.locator('[data-page="settings"]').click();await page.locator('#music-volume').focus();await page.keyboard.press('Home');expect((await state(page)).music.volume).toBe(0);expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('grand-theft-train-poop-city-save-v1-settings')!).music)).toBe(0);
  await page.click('#back');await page.click('#resume');await page.screenshot({path:'test-results/retrowave-world.png'});
  expect((await state(page)).audio.error).toBe('');expect(errors).toEqual([]);
