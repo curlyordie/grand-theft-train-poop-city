@@ -21,5 +21,6 @@ export class Fleet {
   nearest(player:Player){return this.vehicles.filter(v=>v.canEnter(player)).sort((a,b)=>a.position.distanceToSquared(player.position)-b.position.distanceToSquared(player.position))[0];}
   enter(player:Player){const vehicle=this.nearest(player);if(!vehicle||!vehicle.enter(player))return false;this.active=vehicle;return true;}
   update(dt:number,input:Input,onCollision:(impact:number,collider?:RAPIER.Collider)=>void){if(this.active.occupied)this.active.update(dt,input,onCollision);}
+  updateDriverDeaths(dt:number){this.vehicles.forEach(vehicle=>vehicle.updateDriverDeath(dt));}
   sync(){this.vehicles.forEach(v=>v.sync());}
 }

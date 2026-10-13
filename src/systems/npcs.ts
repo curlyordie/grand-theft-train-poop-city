@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Physics, RAPIER } from './physics';
 import { personModel } from '../world/people';
+import type { CivilianKind } from '../world/assets';
 
 export type NPCState = 'wander' | 'idle' | 'flee' | 'fight' | 'pursue' | 'search' | 'incapacitated';
 export type NPCRole = 'civilian' | 'shopkeeper' | 'hostile' | 'police';
@@ -12,9 +13,10 @@ export class NPC {
   lastKnown = new THREE.Vector3();
   hurt = 0;
   sidestep = 0;reaction=0;
+  activity='';activityTime=0;ambientWait=this.randomWait();
   targetCollider?: RAPIER.Collider;
-  constructor(public id: number, public role: NPCRole, public path: THREE.Vector3[], scene: THREE.Scene, private physics: Physics) {
-    this.spawn = path[0].clone(); this.position.copy(this.spawn); this.model = personModel(id, role === 'police'); scene.add(this.model.root);
+  constructor(public id: number, public role: NPCRole, public path: THREE.Vector3[], scene: THREE.Scene, private physics: Physics,public kind:CivilianKind='remy') {
+    this.spawn = path[0].clone(); this.position.copy(this.spawn); this.model = personModel(id, role === 'police',kind); scene.add(this.model.root);
     this.health = role === 'police' ? 90 : role === 'hostile' ? 70 : 55;
     this.body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(this.spawn.x, .82, this.spawn.z));
     this.collider = physics.world.createCollider(RAPIER.ColliderDesc.capsule(.5, .27), this.body);
@@ -22,9 +24,22 @@ export class NPC {
   }
   reset() {
     this.health = this.role === 'police' ? 90 : this.role === 'hostile' ? 70 : 55;
-    this.state = 'wander'; this.timer = 0; this.index = 0;this.reaction=0;this.model.motion.reset();
+    this.state = 'wander'; this.timer = 0; this.index = 0;this.reaction=0;this.activity='';this.activityTime=0;this.ambientWait=this.randomWait();this.model.motion.reset();
     const p = this.spawn.clone(); p.y = .82; this.body.setTranslation(p, true); this.body.setNextKinematicTranslation(p);
-    this.model.root.rotation.z = 0; this.sync();
+    this.model.root.rotation.x=this.model.root.rotation.z = 0; this.sync();
+  }
+  private randomWait(){return -Math.log(Math.max(.000001,1-Math.random()))*100;}
+  cancelActivity(){
+    if(this.activity&&this.model.motion.current===this.activity)this.model.motion.finishAction();
+    this.activity='';this.activityTime=0;this.ambientWait=this.randomWait();
+  }
+  private ambient(dt:number){
+    if(this.activity){this.activityTime-=dt;if(this.activityTime<=0)this.cancelActivity();return;}
+    this.ambientWait-=dt;if(this.ambientWait>0)return;
+    const choices=['phone',...(this.state==='wander'?['texting']:[]),...(this.kind==='cityside'?['milk']:[])].filter(name=>this.model.motion.actions.has(name));
+    const name=choices[Math.floor(Math.random()*choices.length)];
+    if(name&&this.model.playMotion(name,undefined,2)){this.activity=name;this.activityTime=this.model.motion.actions.get(name)!.getClip().duration;}
+    else this.ambientWait=this.randomWait();
   }
   setActive(active: boolean) { this.active = active; this.model.root.visible = active; this.collider.setEnabled(active && this.health > 0); }
   sync() { const p = this.body.translation(); this.position.set(p.x, p.y, p.z); this.model.root.position.set(p.x, p.y - .78, p.z); }
@@ -39,11 +54,13 @@ export class NPC {
     if (this.health <= 0) return false;
     this.health = Math.max(0, this.health - amount); this.lastKnown.copy(threat); this.timer = 8; this.hurt = .25;
     this.state = this.health === 0 ? 'incapacitated' : this.role === 'hostile' || this.role === 'police' || this.id % 7 === 0 ? 'fight' : 'flee';
-    if (!this.health) { this.collider.setEnabled(false); this.model.root.rotation.z = Math.PI / 2; }
+    this.cancelActivity();
+    if (!this.health) { this.collider.setEnabled(false);this.model.root.rotation.x=this.model.root.rotation.z=0;this.model.motion.die(); }
     return true;
   }
   update(dt: number, player: THREE.Vector3, armed: boolean, wanted: number, onAttack: (amount: number, npc: NPC) => void) {
-    if (!this.active || this.health <= 0) return;
+    if (!this.active) return;
+    if(this.health<=0){this.model.animate(dt,0);return;}
     this.attackTimer -= dt; this.timer -= dt; this.hurt = Math.max(0, this.hurt - dt); this.sidestep = Math.max(0, this.sidestep - dt);
     const distance = this.position.distanceTo(player);
     if (this.role === 'police' && wanted > 0) {
@@ -54,6 +71,7 @@ export class NPC {
     this.reaction=Math.max(0,this.reaction-dt);
     if (armed && distance < 7 && this.role === 'civilian' && this.state === 'wander'&&this.canSee(player,7)) {this.reaction=.7;this.model.playMotion('reaction',.7,2); this.state = 'flee'; this.timer = 5; this.lastKnown.copy(player); }
     if (this.timer <= 0 && (this.state === 'idle' || this.state === 'flee' || this.state === 'search')) this.state = 'wander';
+    if(this.state==='wander'||this.state==='idle')this.ambient(dt);else if(this.activity)this.cancelActivity();
     let target = this.path[this.index], speed = 1.15 + this.id % 3 * .22;
     if (this.state === 'idle') speed = 0;
     if (this.state === 'flee') { target = this.position.clone().add(this.position.clone().sub(this.lastKnown).setY(0).normalize().multiplyScalar(10)); speed = this.reaction>0?.8:4; }
@@ -68,7 +86,7 @@ export class NPC {
     if (this.state === 'search') target = this.lastKnown;
     const delta = target.clone().sub(this.position).setY(0);
     if (this.sidestep > 0) delta.applyAxisAngle(THREE.Object3D.DEFAULT_UP, this.id % 2 ? Math.PI / 2 : -Math.PI / 2);
-    if (this.hurt > 0) speed = 0;
+    if (this.hurt > 0 || this.activity==='phone'||this.activity==='milk') speed = 0;
     this.model.root.rotation.x = this.hurt * .8;
     if (delta.length() < .8 && this.state === 'wander') { this.index = (this.index + 1) % this.path.length; if (this.id % 3 === 0) { this.state = 'idle'; this.timer = 1.5; } }
     delta.normalize().multiplyScalar(speed * dt); delta.y = -2 * dt;
@@ -79,7 +97,8 @@ export class NPC {
     this.stuck = speed > 0 && progress < dt * .2 ? this.stuck + dt : 0;
     if (this.stuck > 1.5) { this.index = (this.index + 1) % this.path.length; this.stuck = 0; this.sidestep = 1; if (this.state === 'flee') this.lastKnown.add(new THREE.Vector3(3, 0, -3)); }
     if (progress > .001) this.model.root.rotation.y = Math.atan2(-movement.x, -movement.z);
-    this.model.animate(dt,speed,{sprint:this.state==='flee'||this.state==='pursue'});
+    const actualSpeed=progress/dt;
+    this.model.animate(dt,actualSpeed,{sprint:this.state==='flee'||this.state==='pursue',stopping:actualSpeed<.2&&this.model.motion.speed>.2});
     this.animation += dt * speed * 2; const stride = Math.sin(this.animation) * .4;
     this.model.legs[0].rotation.x = stride; this.model.legs[1].rotation.x = -stride;
     this.model.arms[0].rotation.x = THREE.MathUtils.lerp(this.model.arms[0].rotation.x, -stride, .2); this.model.arms[1].rotation.x = stride;
@@ -99,11 +118,18 @@ export class NPCSystem {
       }
     });
     this.npcs.push(new NPC(this.npcs.length,'shopkeeper',[new THREE.Vector3(103,.82,-7),new THREE.Vector3(103,.82,-5.5)],scene,physics));
+    // Keep the original 43 residents and their IDs; add four of each uploaded type.
+    const kinds:CivilianKind[]=['kurta','cityside','cityside-unrigged'];
+    const starts=[[7,29],[-5.5,39],[7,-18],[55,31],[-41,36],[55,-53],[103,-51],[-89,-49],[7,132],[103,162],[-137,-108],[55,-153]];
+    starts.forEach(([x,z],i)=>this.npcs.push(new NPC(this.npcs.length,'civilian',[
+      new THREE.Vector3(x,.82,z),new THREE.Vector3(x,.82,z+10),new THREE.Vector3(x-.6,.82,z+2)
+    ],scene,physics,kinds[i%kinds.length])));
   }
   reset() { this.npcs.forEach(n => n.reset()); }
   addPolice(position: THREE.Vector3) { const npc = new NPC(this.npcs.length, 'police', [position.clone(), position.clone().add(new THREE.Vector3(0, 0, 8))], this.scene, this.physics); this.npcs.push(npc); return npc; }
   nearest(position: THREE.Vector3) { return this.npcs.filter(n => n.active && n.health > 0 && n.position.distanceTo(position) < 2.4).sort((a,b)=>a.position.distanceToSquared(position)-b.position.distanceToSquared(position))[0]; }
   interact(npc: NPC, armed: boolean) {
+    npc.cancelActivity();
     if (armed && npc.role !== 'police') { npc.state = 'flee'; npc.timer = 7; return '“Put that away. My insurance is theoretical.”'; }
     npc.state = 'idle'; npc.timer = 6;
     return ['“The roadworks are temporary. Since 2009.”', '“Rooms upstairs. Regrets are complimentary.”', '“Nice shirt. Try not to get it confiscated.”', '“Traffic remains, regrettably, traffic.”'][npc.id % 4];

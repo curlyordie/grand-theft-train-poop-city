@@ -25,6 +25,12 @@ CesiumMan is retained as an unused development reference in the source tree. It 
 
 **Remy face retexture**: supplied by the user as `Remy_Face_Texture_Final_Package.zip`. The replacement `Remy_Face_Texture_Final.png` is applied to Remy's Bodymat diffuse map at its original 2048 × 2048 resolution, encoded as WebP for the embedded game. The package supplies no additional creator credit or licence statement. All other model maps, geometry, UVs, skeleton and animations are preserved.
 
+## User-supplied Meshy civilians and additional Mixamo actions
+
+The Kurta FBX package, Cityside Smile All Animations GLB and final Cityside Smile texture GLB are supplied by the user as three separate Meshy AI characters. The uploads contain no separate creator attribution or licence statement. They are included as characters in this game. The existing civilians are retained. Adaptations: fitted weighted skeletons for the two unrigged meshes, approximately 64K-triangle display meshes for those two characters, game height/orientation, in-place motion retargeting and embedded WebP conversion of the original 2K textures. The originally rigged Cityside mesh and skeleton are retained.
+
+User-supplied Without Skin Mixamo clips: Standing React Death Forward, Talking On Phone, Texting And Walking, Cow Milking, Scary Clown Walk, Scary Clown Start Walking and Scary Clown Stopping. The Adobe Mixamo game-use FAQ linked above applies. They are incorporated in the game, not distributed as an independent animation product. Adaptations: retargeting to the character skeletons, stripped horizontal root motion for locomotion, preserved death displacement and compacted redundant keys (angular tolerance 0.0015 radians; positional tolerance 0.6mm). Standing React Death Forward supersedes the earlier inaccessible Death From The Front upload. The new phone/texting/Cow Milking files supersede their earlier oversized uploads.
+
 ## User-selected 2K surface materials
 
 - **Asphalt 02**, [Poly Haven source](https://polyhaven.com/a/asphalt_02), CC0: roads and broken road patches.

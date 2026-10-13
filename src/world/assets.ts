@@ -8,31 +8,38 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import civilianUrl from '../assets/remy.glb?url';
+import kurtaUrl from '../assets/kurta.glb?url';
+import citysideUrl from '../assets/cityside.glb?url';
+import citysideUnriggedUrl from '../assets/cityside-unrigged.glb?url';
 import humanUrl from '../assets/resident.glb?url';
 import bossUrl from '../assets/boss.glb?url';
 import carUrl from '../assets/car.glb?url';
 import environmentUrl from '../assets/pretville-street.hdr?url';
+export type CivilianKind='remy'|'kurta'|'cityside'|'cityside-unrigged';
 let human:GLTF,car:GLTF,civilian:GLTF,boss:GLTF;
+const additions={} as Record<Exclude<CivilianKind,'remy'>,GLTF>;
 export let environment:THREE.DataTexture;
 export async function loadAssets(){
  const loader=new GLTFLoader(),textures=new THREE.TextureLoader();
- [human,car,civilian,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl),loadSurfaceMaps(textures),loadWeaponAssets(loader),loadMotions(),loadPropAssets(loader),loadAudioAssets()]);
+ [human,car,civilian,environment,boss]=await Promise.all([loader.loadAsync(humanUrl),loader.loadAsync(carUrl),loader.loadAsync(civilianUrl),new RGBELoader().loadAsync(environmentUrl),loader.loadAsync(bossUrl),loadSurfaceMaps(textures),loadWeaponAssets(loader),loadMotions(),loadPropAssets(loader),loadAudioAssets(),
+  Promise.all([loader.loadAsync(kurtaUrl),loader.loadAsync(citysideUrl),loader.loadAsync(citysideUnriggedUrl)]).then(([kurta,cityside,unrigged])=>Object.assign(additions,{kurta,cityside,'cityside-unrigged':unrigged}))]);
  environment.mapping=THREE.EquirectangularReflectionMapping;
 }
 
-export function humanModel(index=0,rab=false,official=false){
+export function humanModel(index=0,rab=false,official=false,kind:CivilianKind='remy'){
  const useCivilian=!rab&&!official;
- const character=rab?boss:useCivilian?civilian:human;
+ const character=rab?boss:useCivilian?(kind==='remy'?civilian:additions[kind]):human;
  const root=new THREE.Group(),body=clone(character.scene) as THREE.Group;root.add(body);
  // Resident mesh is authored in centimetres under a 0.01 conversion node.
  // Skinned bounds before the first renderer skeleton update are not valid for sizing.
  // Remy is authored at 3.78m; match The Boss at approximately 1.895m.
- body.scale.setScalar(rab?.95:useCivilian?.50075:1.02);body.position.y=.015;
+ body.scale.setScalar(rab?.95:useCivilian?(kind==='remy'?.50075:kind==='cityside'?1.895/1.7:1):1.02);body.position.y=.015;
  // Native front faces +Z; the game's character convention faces -Z.
  body.rotation.y=rab||useCivilian?Math.PI:0;
  body.traverse(object=>{if(object instanceof THREE.Mesh){object.castShadow=object.receiveShadow=true;object.frustumCulled=true;if(object instanceof THREE.SkinnedMesh){object.geometry.computeBoundingSphere();object.boundingSphere=object.geometry.boundingSphere!.clone();object.boundingSphere.radius*=1.8;}object.material=(object.material as THREE.MeshStandardMaterial).clone();const mat=object.material as THREE.MeshStandardMaterial;mat.roughness=.82;mat.color.set(official?'#b8ad84':'#ffffff');if(object.name==='vanguard_visor')object.visible=false;
 }});
- const motion=new CharacterMotion(body,rab?'boss':official?'police':'remy',character.animations);
+ const native=character.animations.map(clip=>{if(kind==='cityside'&&!rab&&!official){const mapped=clip.clone();mapped.name=clip.name==='Running'?'jog':clip.name==='Walking'?'walk':clip.name;return mapped;}return clip;});
+ const motion=new CharacterMotion(body,rab?'boss':official?'police':kind,native);
  body.updateMatrixWorld(true);
  const bone=(name:string)=>body.getObjectByName(name)??body.getObjectByName(name.replace('mixamorig','mixamorig:'));
  let seated=false;const originalPose=new Map<THREE.Object3D,THREE.Quaternion>();
@@ -86,7 +93,7 @@ export function humanModel(index=0,rab=false,official=false){
   root.userData.driverBounds={min:bounds.min.clone().multiplyScalar(fitted).add(position).toArray(),max:bounds.max.clone().multiplyScalar(fitted).add(position).toArray(),limits:[min.toArray(),max.toArray()]};
   return{scale:fitted,position};
  };
- root.userData.poseDriving=poseDriving;root.userData.animateDriving=animateDriving;root.userData.fitDriving=fitDriving;root.userData.motion=motion;root.userData.asset=rab?'The Boss':official?'Soldier':'Remy';
+ root.userData.poseDriving=poseDriving;root.userData.animateDriving=animateDriving;root.userData.fitDriving=fitDriving;root.userData.motion=motion;root.userData.asset=rab?'The Boss':official?'Soldier':kind==='remy'?'Remy':kind==='kurta'?'Kurta':kind==='cityside'?'Cityside Smile':'Cityside Smile (clown walk)';root.userData.civilianKind=kind;
  return {root,arms,legs,torso,hips:torso,motion,poseDriving,animateDriving,fitDriving,poseCombat,playMotion:(name:string,duration?:number,priority=2)=>motion.play(name,duration,priority),animate:(dt:number,speed:number,options:MotionOptions={})=>{poseDriving(false);motion.update(dt,speed,options);}};
 
 }

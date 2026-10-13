@@ -53,6 +53,7 @@ export class Game {
   audio = new AudioSystem();
   storage = new SaveSystem();
   health = 100;
+  deathRemaining=0;
   cash = 250;
   bottles = 0;
   running = false;
@@ -169,27 +170,43 @@ export class Game {
     return saved;
   }
   start(continuing: boolean) {
+    this.deathRemaining=0;
     const data = continuing ? this.storage.load() : null;
     this.health = 100; this.cash = data?.cash ?? 250; this.bottles = data?.bottles ?? 0; this.pickups.restore(data?.collected ?? []); this.npcs.reset(); this.missions.restore(data?.missions ?? []); this.inventory.restore(data?.inventory); this.loot.restore(data?.loot ?? []); this.combat.visual();
     this.fleet.reset(); this.traffic.reset(); this.police.reset(); this.player.reset(); this.physics.step(); this.follow.reset(this.player.position);
     this.started = true; this.save(); this.resume();
     this.ui.toast(continuing ? 'BACK TO YOUR POOR DECISIONS' : 'WELCOME TO SUNDARPUR', '“I was having a perfectly shite day before this.”');
   }
-  resume() { this.input.clear(); this.ui.hide(); this.running = this.input.active = true; this.accumulator = 0; this.audio.unlock();this.audio.updateMusic({running:true,driving:this.player.driving,speed:0,movement:0,wanted:this.police.level,attacks:this.combat.attacks,hurt:false}); this.audio.play('pickup',{volume:.2}); this.capture(); }
+  resume() { this.input.clear(); this.ui.hide(); this.running = true;this.input.active=this.health>0; this.accumulator = 0; this.audio.unlock();this.audio.updateMusic({running:true,driving:this.player.driving,speed:0,movement:0,wanted:this.police.level,attacks:this.combat.attacks,hurt:false}); this.audio.play('pickup',{volume:.2}); this.capture(); }
   pause(controls = false) {
     this.running = this.input.active = false; this.input.clear(); this.ui.returnPage = 'pause'; this.ui.show(controls ? 'controls' : 'pause'); document.exitPointerLock(); this.audio.updateEngine(0, false);this.audio.pause();
   }
   menu() { this.save(); this.running = this.input.active = false;this.renderRequested=true; this.input.clear(); this.ui.show('menu'); document.exitPointerLock(); this.audio.updateEngine(0, false);this.audio.pause(); }
   restart() {
+    this.deathRemaining=0;
     if (this.missions.state === 'failed') this.missions.interact(SAFEHOUSE.clone().setY(.84));
     else if (this.missions.state === 'active') { this.missions.stage = 0; this.missions.parcel = false; }
     this.fleet.reset(); this.traffic.reset(); this.police.reset(); this.player.reset(); this.health = 100; this.physics.step(); this.follow.reset(this.player.position); this.resume();
     this.ui.toast('BACK AT THE CHECKPOINT', '“Aye, that’s gone well.”');
   }
   damagePlayer(amount: number, source: THREE.Vector3) {
-    if (amount <= 0) return;
+    if (amount <= 0 || this.health<=0) return;
     this.health = Math.max(0, this.health - amount); this.damageFlash = .35;
     this.effects.blood(this.player.position.clone().add(new THREE.Vector3(0,.5,0)), this.player.position.clone().sub(source).setY(0).normalize(), amount > 20);
+  }
+  private beginDeath(){
+    if(this.player.model.motion.dead)return;
+    this.health=0;this.deathRemaining=Math.max(.1,this.player.model.motion.die());
+    this.input.clear();this.input.active=false;this.player.collider.setEnabled(false);this.prompt='';
+    if(this.combat.sightWeapon)this.combat.sightWeapon.visible=false;
+    if(this.combat.held)this.combat.held.visible=false;
+    this.audio.updateEngine(0,false);
+    if(this.player.driving)this.vehicle.speed=0;
+  }
+  private respawn(){
+    this.missions.fail();this.npcs.reset();this.cash=Math.max(0,this.cash-50);
+    this.fleet.reset();this.traffic.reset();this.police.reset();this.player.reset();this.health=100;this.deathRemaining=0;this.input.clear();this.input.active=true;this.save();
+    this.follow.reset(SPAWN);this.ui.toast('BACK ON YOUR FEET · ₹50 LOST','“I’ve made a series of outstandingly poor decisions.”');
   }
   interact() {
     if (this.player.driving) {
@@ -220,6 +237,15 @@ export class Game {
     if (npc) this.ui.toast(this.npcs.interact(npc, this.inventory.equipped !== 'fists'));
   }
   fixedUpdate(dt: number) {
+    this.fleet.updateDriverDeaths(dt);
+    if(this.health<=0){
+      this.beginDeath();this.deathRemaining-=dt;
+      if(!this.player.driving)this.player.model.animate(dt,0);
+      this.npcs.update(dt,this.player.position,false,this.police.level,()=>{});
+      this.effects.update(dt);this.physics.step();this.player.sync();this.npcs.sync();if(this.player.driving)this.player.position.copy(this.vehicle.position);
+      if(this.deathRemaining<=0)this.respawn();
+      return;
+    }
     if (this.input.take('KeyE')) this.interact();
     if (this.input.take('KeyB')) {
       if (!this.bottles) this.ui.toast('NO BUCKFAST IN YOUR POCKETS');
@@ -247,11 +273,7 @@ export class Game {
     this.physics.step(); this.player.sync(); this.fleet.sync(); this.npcs.sync(); this.pickups.update(dt);
     if(!groundedBefore&&this.player.grounded&&fallSpeed<-2&&!this.player.driving)this.audio.play('land',{volume:.4});
     if (this.player.driving) this.player.position.copy(this.vehicle.position);
-    if (this.health <= 0 || this.player.position.y < -5) {
-      this.missions.fail(); this.npcs.reset();
-      this.cash = Math.max(0, this.cash - 50); this.fleet.reset(); this.traffic.reset(); this.police.reset(); this.player.reset(); this.health = 100; this.save();
-      this.follow.reset(SPAWN); this.ui.toast('BACK ON YOUR FEET · ₹50 LOST', '“I’ve made a series of outstandingly poor decisions.”');
-    }
+    if (this.health <= 0 || this.player.position.y < -5) {this.beginDeath();return;}
     const motor = this.fleet.vehicles.find(v=>v.id==='mission-sedan'); if(motor)this.missions.motorPosition.copy(motor.position).y=0;
     this.missions.update(dt, { position: this.player.position, vehicleId: this.player.driving ? this.vehicle.id : null, speed: this.vehicle.speed, wanted: this.police.level });
     const nearLoot=this.loot.nearest(this.player.position),nearBottle=this.pickups.nearest(this.player.position);
@@ -281,7 +303,7 @@ export class Game {
       this.follow.update(dt, this.input, position, driving, driving ? this.vehicle.body : this.player.body, this.vehicle.model.root.rotation.y, !driving && this.input.aiming && this.inventory.weapon.type === 'firearm', drivingHeight);
       // Hide the character when wall avoidance brings the camera inside his silhouette.
       this.player.model.root.visible = !this.follow.wasAiming && this.camera.position.distanceTo(this.follow.target) > 1.2;
-      if (this.combat.held) this.combat.held.visible=!driving;
+      if (this.combat.held) this.combat.held.visible=!driving&&this.health>0;
       if (driving) {
         const open=this.vehicle.definition.kind==='motorcycle'||this.vehicle.definition.kind==='rickshaw';
         this.player.model.animateDriving(dt,open);
@@ -295,7 +317,7 @@ export class Game {
         this.player.model.root.rotation.z=this.vehicle.model.root.rotation.z;
         this.player.model.legs.forEach(leg=>leg.rotation.x=.7);this.player.model.arms.forEach(arm=>arm.rotation.x=.9);
       } else {this.player.model.poseDriving(false);this.player.model.root.scale.setScalar(1);this.player.model.root.rotation.z=0;}
-      this.audio.updateEngine(this.vehicle.speed,driving,this.input.down('KeyW')||this.input.down('KeyS'),this.input.down('Space'),this.input.down('KeyA')||this.input.down('KeyD')?1:0,this.vehicle.definition.kind);
+      this.audio.updateEngine(this.vehicle.speed,driving&&this.health>0,this.input.down('KeyW')||this.input.down('KeyS'),this.input.down('Space'),this.input.down('KeyA')||this.input.down('KeyD')?1:0,this.vehicle.definition.kind);
       this.ui.update(dt, { player: this.player.position, car: this.vehicle.position, yaw: this.follow.yaw, driving, speed: this.vehicle.speed, health: this.health, cash: this.cash, bottles: this.bottles, prompt: this.prompt, collected: this.pickups.collected.length, distanceDriven: this.vehicle.distanceDriven, missionName: this.missions.name, objective: this.missions.objective, vehicleName: this.vehicle.definition.name, weapon: this.inventory.weapon.name, ammo: this.inventory.weapon.ammo ? `${this.inventory.magazine} / ${this.inventory.reserve[this.inventory.weapon.ammo]}` : 'MELEE', reloading: this.inventory.reloading > 0, damageFlash: this.damageFlash, wanted: this.police.level, searching: !this.police.seen, missionTarget: this.missions.target, locked: this.input.locked });
     } else if (!this.started || this.ui.page === 'menu') {
       this.camera.position.set(2 + Math.sin(time * .00007) * .5, 8.5, 35); this.camera.lookAt(2, 2, -15);

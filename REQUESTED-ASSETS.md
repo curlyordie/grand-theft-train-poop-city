@@ -4,6 +4,22 @@ The Boss is the player; all civilians and civilian drivers use Remy, scaled to m
 
 Remy uses the user-supplied `Remy_Face_Texture_Final.png` from `Remy_Face_Texture_Final_Package.zip` in the Bodymat diffuse slot. Its original 2048 × 2048 UV layout is retained and encoded as high-quality WebP inside the GLB. All other embedded maps, mesh/UV data, skeletons and animation data are preserved.
 
+## Additional Meshy civilians
+
+The user confirmed three separate additions. The original 43 residents, their IDs and Remy models are preserved; 12 residents are added, four of each new type:
+
+| Added type | Uploaded model | Animation profile |
+|---|---|---|
+| Kurta | Meshy_AI_T_Pose_Kurta_Model_1013081339_texture_fbx.zip | Fitted weighted skeleton and existing locomotion/actions |
+| Cityside Smile | Meshy_AI_Cityside_Smile_All_Animations.glb | Supplied skeleton, existing locomotion/actions; exclusive Cow Milking |
+| Cityside Smile (clown walk) | Meshy_AI_Cityside_Smile_1013091356_texture.glb | Fitted weighted skeleton; Scary Clown Walk, Start Walking and Stopping |
+
+The two unrigged models are skinned to fitted versions of the uploaded Cityside skeleton. They use detailed approximately 64K-triangle display meshes and retain their supplied 2K textures. Heights match The Boss at approximately 1.895m. New motion clips are retargeted to each skeleton; the existing Boss/Remy action clips remain exact.
+
+Talking On Phone and Texting And Walking occur at independently random intervals for NPCs of every type. Phone calls and Cow Milking stop walking for the authored clip duration; texting continues along the walking route. Actions finish normally, resume locomotion, and yield to danger, damage or interaction. Cow Milking is available only to the originally rigged Cityside model. The final Cityside model exclusively uses all three Scary Clown walking clips.
+
+Standing React Death Forward replaces the earlier Death From The Front request. It plays once and holds the final pose for all civilian types, police, The Boss and vehicle drivers. Dead NPC colliders are disabled; resets restore the living rig. The Boss respawns after the clip finishes using the existing cash penalty. Enclosed driver animations stay fitted to their vehicle cabin.
+
 | Surface or slot | Applied source |
 |---|---|
 | Roads | Asphalt 02, 2K |

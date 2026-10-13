@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { humanModel } from './assets';
+import { humanModel, type CivilianKind } from './assets';
 import { box, ellipsoid, limb } from './models';
 import { compact } from './compact';
 
-export function personModel(index: number, police = false) {
-  return humanModel(index,false,police);
+export function personModel(index: number, police = false, kind:CivilianKind='remy') {
+  return humanModel(index,false,police,kind);
 }
 function legacyPersonModel(index:number,police=false){
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);

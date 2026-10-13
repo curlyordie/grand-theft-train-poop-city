@@ -45,6 +45,7 @@ export class Vehicle {
   }
   canEnter(player: Player) { return !this.occupied && player.position.distanceTo(this.position) < this.definition.halfLength + 1.9 && player.grounded && Math.abs(this.speed) < 3; }
   enableDriver(model: THREE.Group, health = 55) {
+    model.userData.motion?.reset();
     model.userData.poseDriving?.(true,this.definition.kind==='motorcycle'||this.definition.kind==='rickshaw');
     this.driverModel = model; this.driverHealth = health; this.driver = true; model.visible = true;
     this.driverCollider ??= this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(.22,.18).setTranslation(0,.54,.15),this.body);
@@ -53,8 +54,16 @@ export class Vehicle {
   damageDriver(amount: number) {
     if (!this.driver || this.driverHealth <= 0) return false;
     this.driverHealth = Math.max(0,this.driverHealth-amount);
-    if (this.driverHealth === 0) { this.ai=this.driver=false;this.speed=0;this.driverCollider?.setEnabled(false);if(this.driverModel)this.driverModel.rotation.z=.8; }
+    if (this.driverHealth === 0) { this.ai=this.driver=false;this.speed=0;this.driverCollider?.setEnabled(false);if(this.driverModel){this.driverModel.userData.poseDriving?.(false);this.driverModel.rotation.z=0;this.driverModel.userData.motion?.die();} }
     return true;
+  }
+  updateDriverDeath(dt:number){
+    if(this.driverHealth!==0||!this.driverModel)return;
+    this.driverModel.userData.motion?.update(dt,0);
+    if(this.definition.kind==='motorcycle')return;
+    const kind=this.definition.kind,height=kind==='van'?2.2:kind==='rickshaw'?1.7:kind==='pickup'?1.9:1.38;
+    const fit=this.driverModel.userData.fitDriving?.(new THREE.Vector3(-this.definition.halfWidth+.1,.07,-this.definition.halfLength+.2),new THREE.Vector3(this.definition.halfWidth-.1,height,this.definition.halfLength-.2),.65,new THREE.Vector3(.32,.18,.1));
+    if(fit){this.driverModel.scale.setScalar(fit.scale);this.driverModel.position.copy(fit.position);}
   }
   enter(player: Player) {
     if (!this.canEnter(player)) return false;

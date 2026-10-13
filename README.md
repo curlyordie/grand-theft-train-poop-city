@@ -148,7 +148,7 @@ City architecture, street dressing, signs, jokes and dialogue are created by thi
 
 ## Embedded art
 
-The offline HTML is approximately 104 MB because characters, cars, 14 street prop models, PBR surface maps, weapons, action clips and HDR lighting are embedded. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
+The offline HTML is approximately 102 MB because characters, cars, 14 street prop models, PBR surface maps, weapons, action clips and HDR lighting are embedded. The script bundle is stored as gzip in a printable basE91 payload and decoded locally on startup, keeping the single file under GitHub's 100 MiB limit. No asset network requests are required. First startup decodes these assets. See [ASSET-LICENSES.md](ASSET-LICENSES.md) for model, texture and lighting attribution. Hardware GPU performance remains unverified by the software-rendered cloud checks.
 
 ### Choosing free replacement textures
 
@@ -167,6 +167,8 @@ The Boss has stronger walking arm swing and real skeleton poses for firearm hold
 Roads, pavements, roofs, lampposts, alleyways and building walls use the user-selected 2K colour, OpenGL normal and roughness maps. Lampposts also use a metalness map. The texture changes affect appearance; surface geometry and physics are unchanged.
 
 Remy’s authored 3.78m height is fitted to approximately 1.895m in-game, matching The Boss, including civilian drivers.
+
+Three additional Meshy civilian types are placed around the map: Kurta, Cityside Smile and a separate Cityside Smile with the uploaded Scary Clown walk/start/stop clips. Four of each are added; the original 43 residents retain their models and IDs. All NPC types may randomly talk on the phone or text while walking. Cow Milking is exclusive to the originally rigged Cityside Smile. The two unrigged uploads now have fitted weighted skeletons and retargeted animations. Standing React Death Forward plays once on death for all characters and drivers; The Boss respawns after the clip finishes. See `REQUESTED-ASSETS.md` for the exact upload mapping.
 
 Knife and Hammer replace the previous melee weapon names and meshes, using Machete and Ornate War Hammer. Handgun uses Service Pistol; the existing Shotgun slot uses the supplied Bolt Action Rifle mesh. Cars now face their driving direction. See `REQUESTED-ASSETS.md` for the complete applied mapping.
 
